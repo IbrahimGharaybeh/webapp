@@ -1,0 +1,157 @@
+.occupation-dropdown {
+  position: relative;
+  width: 400px;
+  max-width: 100%;
+}
+
+.dropdown-loading {
+  padding: 8px 16px;
+  color: #6b7280;
+}
+
+.dropdown-button {
+  width: 100%;
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: white;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  outline: none;
+  color: #374151;
+}
+
+.dropdown-button:hover {
+  background-color: #f9fafb;
+}
+
+.dropdown-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.dropdown-button.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dropdown-button .error-text {
+  color: #dc2626;
+}
+
+.dropdown-arrow {
+  width: 20px;
+  height: 20px;
+  color: #9ca3af;
+  transition: transform 0.2s;
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.dropdown-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.dropdown-content-box {
+  position: absolute;
+  z-index: 20;
+  width: 100%;
+  margin-top: 8px;
+  background-color: white;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.dropdown-filters {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.filter-input {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+}
+
+.filter-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.dropdown-scroll-box {
+  max-height: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: white;
+}
+
+.dropdown-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.1s;
+}
+
+.dropdown-item.three-col {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.dropdown-item:hover {
+  background-color: #eff6ff;
+}
+
+.dropdown-item.selected {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.dropdown-item.selected:hover {
+  background-color: #2563eb;
+}
+
+.item-code {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.dropdown-item.selected .item-code {
+  color: white;
+}
+
+.item-name {
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.dropdown-item.selected .item-name {
+  color: white;
+}
+
+.no-results {
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 14px;
+  color: #6b7280;
+}
