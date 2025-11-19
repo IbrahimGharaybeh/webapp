@@ -1,19 +1,21 @@
 // fillPermitForm.js
 
-const fs = require("fs/promises");
-const { PDFDocument, TextAlignment } = require("pdf-lib");
-const fontkit = require("@pdf-lib/fontkit");
+import fs from "fs/promises";
+import { PDFDocument, TextAlignment } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
+// import bwipjs from "bwip-js";
+// import { getBigBarcodeDataJS } from "./barcodeUtils.js";
 
 async function PersonFormFiller(data) {
   // 1) Load the PDF template (fillable form)
-  const formPdfBytes = await fs.readFile("./templates/Person.pdf");
+  const formPdfBytes = await fs.readFile("./form/templates/Person.pdf");
   const pdfDoc = await PDFDocument.load(formPdfBytes);
 
   // 2) Enable fontkit so we can embed custom fonts (like Arial with Arabic)
   pdfDoc.registerFontkit(fontkit);
 
   // 3) Load your font (make sure fonts/arial.ttf exists)
-  const fontBytes = await fs.readFile("./fonts/arial.ttf");
+  const fontBytes = await fs.readFile("./form/fonts/arial.ttf");
   const arabicFont = await pdfDoc.embedFont(fontBytes);
 
   // 4) Get the form
@@ -46,14 +48,14 @@ async function PersonFormFiller(data) {
   form.getTextField("expiryDate1").setText(safe(data.residenceExpiryDate));
   form.getTextField("dateOfBirth").setText(safe(data.dateOfBirth));
   form.getTextField("expiryDate2").setText(safe(data.molExpiryDate));
-  form.getTextField("molPermitNo").setText(safe(data.molPermitNo));
+  form.getTextField("molNo").setText(safe(data.molNo));
 
-  form.getTextField("ContractNo1").setText(safe(data.ContractNo1));
-  form.getTextField("ContractNo2").setText(safe(data.ContractNo2));
-  form.getTextField("ContractNo3").setText(safe(data.ContractNo3));
-  form.getTextField("ContractNo4").setText(safe(data.ContractNo4));
-  form.getTextField("ContractNo5").setText(safe(data.ContractNo5));
-  form.getTextField("ContractNo6").setText(safe(data.ContractNo6));
+  form.getTextField("contractNo1").setText(safe(data.contractNo1));
+  form.getTextField("contractNo2").setText(safe(data.contractNo2));
+  form.getTextField("contractNo3").setText(safe(data.contractNo3));
+  form.getTextField("contractNo4").setText(safe(data.contractNo4));
+  form.getTextField("contractNo5").setText(safe(data.contractNo5));
+  form.getTextField("contractNo6").setText(safe(data.contractNo6));
 
   form.getTextField("permittedLocationCode1").setText(safe(data.permittedLocationCode1));
   form.getTextField("permittedLocationCode2").setText(safe(data.permittedLocationCode2));
@@ -88,9 +90,68 @@ async function PersonFormFiller(data) {
   // 7) Update appearance with the embedded font
   form.updateFieldAppearances(arabicFont);
 
-  // 8) Save and return bytes
+  // 8) Build barcode data using the full C# port logic
+  // const rawBarcodeData = getBigBarcodeDataJS(data);
+
+  // // 9) Generate PDF417 barcode image as PNG using bwip-js
+  // const pngBuffer = await new Promise((resolve, reject) => {
+  //   bwipjs.toBuffer(
+  //     {
+  //       bcid: "pdf417",
+  //       text: rawBarcodeData,
+  //       scale: 3,
+  //       height: 10,
+  //       includetext: false,
+  //     },
+  //     (err, png) => {
+  //       if (err) reject(err);
+  //       else resolve(png);
+  //     }
+  //   );
+  // });
+
+  // // 10) Embed the barcode image into the PDF (top box beside the photo)
+  // //const barcodeImage = await pdfDoc.embedPng(pngBuffer);
+  // //const page = pdfDoc.getPages()[0];
+  // //const { width: pageWidth, height: pageHeight } = page.getSize();
+
+  // // Define a top box area beside the photo – adjust x/y/width/height to fit exactly
+  // const topBox = {
+  //   x: 240,              // move right/left
+  //   y: pageHeight - 170, // move up/down
+  //   width: 260,
+  //   height: 70,
+  // };
+
+  // // Optional: debug rectangle
+  // // page.drawRectangle({
+  // //   x: topBox.x,
+  // //   y: topBox.y,
+  // //   width: topBox.width,
+  // //   height: topBox.height,
+  // //   borderWidth: 1,
+  // // });
+
+  // const originalDims = barcodeImage.scale(1);
+  // const scaleFactor = Math.min(
+  //   topBox.width / originalDims.width,
+  //   topBox.height / originalDims.height
+  // );
+  // const scaledDims = barcodeImage.scale(scaleFactor);
+
+  // const drawX = topBox.x + (topBox.width - scaledDims.width) / 2;
+  // const drawY = topBox.y + (topBox.height - scaledDims.height) / 2;
+
+  // page.drawImage(barcodeImage, {
+  //   x: drawX,
+  //   y: drawY,
+  //   width: scaledDims.width,
+  //   height: scaledDims.height,
+  // });
+
+  // 11) Save PDF
   const pdfBytes = await pdfDoc.save();
   return pdfBytes;
 }
 
-module.exports = { PersonFormFiller };
+export { PersonFormFiller };
