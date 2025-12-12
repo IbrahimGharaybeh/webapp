@@ -1,11 +1,20 @@
 import express from 'express';
 import cors from 'cors';
+import pkg from 'pg';
 import { PersonFormFiller } from './form/PersonFormFiller.js';
 import { VehicleFormFiller } from './form/VehicleFormFiller.js';
 import { ShipFormFiller } from './form/ShipFormFiller.js';
 import { PhotographyFormFiller } from './form/PhotographyFormFiller.js';
 const app = express();
 const PORT = process.env.PORT || 5000;
+const {Pool} = pkg;
+const pool = new Pool({
+  host: 'db',           // 'db' is the service name in docker-compose
+  port: 5432,
+  database: 'postgres',
+  user: 'postgres',
+  password: 'password'  // same as in db/password.txt
+});
 
 app.use(express.json());
 app.use(cors({
@@ -180,6 +189,22 @@ app.post('/api/photography', async (req, res) => {
     })
   }
 })
+
+app.post('/api/users/signup', async (req, res) => {
+  const { id, email, username, name, is_company } = req.body;
+
+  try {
+    await pool.query(
+      'INSERT INTO users (id, email, username, name, is_company) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING',
+      [id, email, username, name, is_company]
+    );
+    res.status(201).json({ message: 'User created' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

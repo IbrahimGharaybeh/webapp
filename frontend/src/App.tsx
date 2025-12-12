@@ -9,10 +9,12 @@ import Dashboard from './pages/Dashboard';
 import LandingPage from './pages/LandingPage/LandingPage';
 import Login from './components/Login/Login';
 import Signup from './components/Signup/Signup';
+import { AuthListener } from './lib/AuthListener';
 
 function App() {
   return (
     <>
+      <AuthListener />
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
