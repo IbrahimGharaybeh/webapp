@@ -205,6 +205,34 @@ app.post('/api/users/signup', async (req, res) => {
   }
 });
 
+app.post('/api/users/check', async (req, res) => {
+  const { username, email } = req.body;
+
+  try {
+    const result = await pool.query(
+      'SELECT username, email FROM users WHERE username = $1 OR email = $2',
+      [username, email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ available: true });
+    }
+
+    for (const row of result.rows) {
+      if (row.username === username) {
+        return res.json({ available: false, error: 'Username already taken' });
+      }
+      if (row.email === email) {
+        return res.json({ available: false, error: 'Email already taken' });
+      }
+    }
+
+    return res.json({ available: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to check availability' });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

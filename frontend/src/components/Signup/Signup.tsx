@@ -1,3 +1,4 @@
+//@ts-ignore
 import { useState, FormEvent } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Link } from 'react-router-dom';
@@ -12,23 +13,38 @@ export default function Signup() {
   const [message, setMessage] = useState('');
 
   const handleSignup = async (e: FormEvent) => {
-    e.preventDefault();
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          username,
-          name,
-          is_company: isCompany
-        }
-      }
-    });
+  e.preventDefault();
+  setError('');
 
-    if (error) setError(error.message);
-    else setMessage('Check your email for confirmation link');
-  };
+  // Check if username/email available first
+  const checkRes = await fetch('http://localhost:5000/api/users/check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, email })
+  });
+  const checkData = await checkRes.json();
+
+  if (!checkData.available) {
+    setError(checkData.error);
+    return;  // Stop here
+  }
+
+  // Then create Supabase user
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username, name, is_company: isCompany }
+    }
+  });
+
+  if (error) {
+    setError(error.message);
+    return;  // Stop here too
+  }
+
+  setMessage('Account created successfully');
+};
 
   return (
     <div>

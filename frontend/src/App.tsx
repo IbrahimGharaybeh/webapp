@@ -10,24 +10,37 @@ import LandingPage from './pages/LandingPage/LandingPage';
 import Login from './components/Login/Login';
 import Signup from './components/Signup/Signup';
 import { AuthListener } from './lib/AuthListener';
+import { AuthProvider } from './lib/AuthContext';
+import { ProtectedRoute } from './lib/ProtectedRoutes';
 
 function App() {
   return (
-    <>
+    <AuthProvider>
       <AuthListener />
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/person" element={<Person />} />
-        <Route path="/vehicle" element={<Vehicle />} />
-        <Route path="/ship" element={<Ship />} />
-        <Route path="/photography" element={<Photography />} />
-        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+
+        <Route path="/person" element={
+          <ProtectedRoute><Person /></ProtectedRoute>
+        } />
+        <Route path="/vehicle" element={
+          <ProtectedRoute><Vehicle /></ProtectedRoute>
+        } />
+        <Route path="/ship" element={
+          <ProtectedRoute><Ship /></ProtectedRoute>
+        } />
+        <Route path="/photography" element={
+          <ProtectedRoute><Photography /></ProtectedRoute>
+        } />
+        <Route path="/dashboard" element={
+          <ProtectedRoute><Dashboard /></ProtectedRoute>
+        } />
       </Routes>
-    </>
+    </AuthProvider>
   );
 }
 
