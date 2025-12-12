@@ -19,6 +19,7 @@
   "main": "index.js",
   "dependencies": {
     "@clerk/clerk-react": "^5.54.0",
+    "@supabase/supabase-js": "^2.87.1",
     "cors": "^2.8.5",
     "esbuild": "^0.25.12",
     "fdir": "^6.5.0",

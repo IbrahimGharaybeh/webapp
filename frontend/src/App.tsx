@@ -7,6 +7,8 @@ import Ship from './pages/Ship';
 import Photography from './pages/Photography';
 import Dashboard from './pages/Dashboard';
 import LandingPage from './pages/LandingPage/LandingPage';
+import Login from './components/Login/Login';
+import Signup from './components/Signup/Signup';
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
         <Route path="/photography" element={<Photography />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/landing" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
       </Routes>
     </>
   );

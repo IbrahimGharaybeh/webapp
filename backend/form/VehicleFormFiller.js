@@ -48,7 +48,7 @@ export async function VehicleFormFiller(data) {
   form.getTextField("name").setText(safe(data.name));
   form.getTextField("secPermitNo").setText(safe(data.secPermitNo));
   form.getTextField("nationalityCode").setText(safe(data.nationalityCode));
-  form.getTextField("nationality").setText(safe(data.nationality))
+  form.getTextField("nationality").setText(safe(data.nationality));
   form.getTextField("religionCode").setText(safe(data.religionCode));
   form.getTextField("occupation").setText(safe(data.occupation));
   form.getTextField("occupationCode").setText(safe(data.occupationCode));
