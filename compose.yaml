@@ -13,6 +13,9 @@ services:
       context: ./backend
     environment:
       NODE_ENV: development
+      SUPABASE_URL: https://ghbwuiiefddfqmgiboww.supabase.co
+      SUPABASE_ANON_KEY: null
+
     ports:
       - 5000:5000
     depends_on:
