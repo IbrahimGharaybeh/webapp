@@ -6,17 +6,21 @@ import fillRoutes from './routes/fill.js';
 import dataRoutes from './routes/data.js';
 import { pool } from './utils/db.js';
 import {limiter, authLimiter} from './utils/ratelimiter.js';
+import helmet from 'helmet';
 
 
 const app = express();
 
 app.use(express.json());
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+//security:
 //limits found in utils/ratelimiter.js
 //general limiter to all routes
 app.use(limiter);
 //stricter api limiter
 app.use('/api/auth', authLimiter)
+//helmet
+app.use(helmet());
 
 app.get('/', (req, res) => res.json({ message: 'API running' }));
 app.all('/api/auth/*path', toNodeHandler(auth)); //auth
