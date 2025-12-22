@@ -13,7 +13,10 @@ const pool = new Pool({
   port: 5432,
   database: 'postgres',
   user: 'postgres',
-  password: 'password'
+  password: 'password',
+  max: 20,                        // Max connections
+  idleTimeoutMillis: 30000,       // Close idle connections after 30s
+  connectionTimeoutMillis: 5000   // Fail if can't connect in 5s
 });
 
 app.use(express.json());
