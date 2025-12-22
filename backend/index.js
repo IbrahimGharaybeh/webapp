@@ -1,29 +1,18 @@
 import express from 'express';
 import cors from 'cors';
-import pkg from 'pg';
-
+import {auth} from './auth.js'
+import {toNodeHandler} from 'better-auth/node'
 import fillRoutes from './routes/fill.js';
 import dataRoutes from './routes/data.js';
+import { pool } from './utils/db.js';
 
 const app = express();
-const { Pool } = pkg;
-
-const pool = new Pool({
-  host: 'db',
-  port: 5432,
-  database: 'postgres',
-  user: 'postgres',
-  password: 'password',
-  max: 20,                        // Max connections
-  idleTimeoutMillis: 30000,       // Close idle connections after 30s
-  connectionTimeoutMillis: 5000   // Fail if can't connect in 5s
-});
 
 app.use(express.json());
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 
 app.get('/', (req, res) => res.json({ message: 'API running' }));
-
+app.all('/api/auth/*path', toNodeHandler(auth)); //auth
 app.use('/api/fill', fillRoutes);
 app.use('/api/data', dataRoutes(pool));  // No supabase
 
