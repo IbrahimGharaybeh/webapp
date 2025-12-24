@@ -9,15 +9,13 @@ import Dashboard from './pages/Dashboard';
 import LandingPage from './pages/LandingPage/LandingPage';
 import Login from './components/Login/Login';
 import Signup from './components/Signup/Signup';
-import { AuthListener } from './lib/AuthListener';
 import { AuthProvider } from './lib/AuthContext';
 import { ProtectedRoute } from './lib/ProtectedRoutes';
 
 function App() {
   return (
     <AuthProvider>
-      <AuthListener />
-      <Navbar />
+\      <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/landing" element={<LandingPage />} />

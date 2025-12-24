@@ -7,7 +7,7 @@ import dataRoutes from './routes/data.js';
 import { pool } from './utils/db.js';
 import {limiter, authLimiter} from './utils/ratelimiter.js';
 import helmet from 'helmet';
-
+import userRoutes from './routes/users.js'
 
 const app = express();
 
@@ -26,6 +26,9 @@ app.get('/', (req, res) => res.json({ message: 'API running' }));
 app.all('/api/auth/*path', toNodeHandler(auth)); //auth
 app.use('/api/fill', fillRoutes);
 app.use('/api/data', dataRoutes(pool));  // No supabase
+
+
+app.use('/api/users', userRoutes(pool));
 
 app.post('/api/users/signup', async (req, res) => {
   const { id, email, username, name, is_company } = req.body;

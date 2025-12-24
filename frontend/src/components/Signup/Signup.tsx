@@ -1,7 +1,7 @@
-//@ts-ignore
-import { useState, FormEvent } from 'react';
-import { supabase } from '../../lib/supabase';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { signUp } from '../../lib/auth';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -13,38 +13,43 @@ export default function Signup() {
   const [message, setMessage] = useState('');
 
   const handleSignup = async (e: FormEvent) => {
-  e.preventDefault();
-  setError('');
+    e.preventDefault();
+    setError('');
 
-  // Check if username/email available first
-  const checkRes = await fetch('http://localhost:5000/api/users/check', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, email })
-  });
-  const checkData = await checkRes.json();
-
-  if (!checkData.available) {
-    setError(checkData.error);
-    return;  // Stop here
-  }
-
-  // Then create Supabase user
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { username, name, is_company: isCompany }
+    // Check if username/email available first
+    const checkRes = await fetch('http://localhost:5000/api/users/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email })
+    });
+    const checkData = await checkRes.json();
+    if (!checkData.available) {
+      setError(checkData.error);
+      return;
     }
-  });
 
-  if (error) {
-    setError(error.message);
-    return;  // Stop here too
-  }
+    // Create Better Auth user
+    const { data, error: signUpError } = await signUp(email, password, name);
+    if (signUpError) {
+      setError(signUpError.message || 'Signup failed');
+      return;
+    }
 
-  setMessage('Account created successfully');
-};
+    // Sync to local users table
+    await fetch('http://localhost:5000/api/users/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: data.user.id,
+        email,
+        username,
+        name,
+        is_company: isCompany
+      })
+    });
+
+    setMessage('Account created successfully');
+  };
 
   return (
     <div>

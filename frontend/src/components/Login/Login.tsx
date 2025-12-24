@@ -1,19 +1,25 @@
-//@ts-ignore
-import { useState, FormEvent } from 'react';
-import { supabase } from '../../lib/supabase';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { login } from '../../lib/auth';
+import { useAuth } from '../../lib/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { refetch } = useAuth();
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
-    else navigate('/');
+    const { error } = await login(email, password);
+    if (error) {
+      setError(error.message || 'Login failed');
+    } else {
+      await refetch();
+      navigate('/');
+    }
   };
 
   return (

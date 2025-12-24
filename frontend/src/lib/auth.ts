@@ -1,33 +1,59 @@
-import { supabase } from './supabase';
+const API_URL = 'http://localhost:5000';
 
-// Sign up
-//@ts-ignore
-export async function signUp(email, password) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password
+export async function signUp(email: string, password: string, name: string = '') {
+  const response = await fetch(`http://localhost:5000/api/auth/sign-up/email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ email, password, name })
   });
-  return { data, error };
+  
+  // Debug: see what we actually get
+  const text = await response.text();
+  console.log('Response status:', response.status);
+  console.log('Response body:', text);
+  
+  if (!text) return { data: null, error: { message: 'Empty response' } };
+  
+  try {
+    const data = JSON.parse(text);
+    if (!response.ok) return { data: null, error: data };
+    return { data, error: null };
+  } catch (e) {
+    return { data: null, error: { message: text } };
+  }
 }
 
-// Login
-//@ts-ignore
-export async function login(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
+export async function login(email: string, password: string) {
+  const response = await fetch(`${API_URL}/api/auth/sign-in/email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ email, password })
   });
-  return { data, error };
+  const data = await response.json();
+  if (!response.ok) return { data: null, error: data };
+  return { data, error: null };
 }
 
-// Logout
 export async function logout() {
-  const { error } = await supabase.auth.signOut();
-  return { error };
+  const response = await fetch(`${API_URL}/api/auth/sign-out`, {
+    method: 'POST',
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    return { error };
+  }
+  return { error: null };
 }
 
-// Get current user
-export async function getUser() {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
+export async function getSession() {
+  const response = await fetch(`${API_URL}/api/auth/get-session`, {
+    method: 'GET',
+    credentials: 'include'
+  });
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data;
 }
