@@ -25,13 +25,13 @@ export default function(pool) {
   });
 
     router.post('/signup', async (req, res) => {
-        const { id, email, username, name, is_company } = req.body;
+        const { id, email, username, name } = req.body;
         console.log('Received ID:', id);  // Add this
         console.log('ID type:', typeof id);  // Add this
         try {
             await pool.query(
-            'INSERT INTO users (id, email, username, name, is_company) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING',
-            [id, email, username, name, is_company]
+            'INSERT INTO users (id, email, username, name) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING',
+            [id, email, username, name]
             );
             res.status(201).json({ message: 'User created' });
         } catch (error) {

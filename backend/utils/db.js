@@ -12,6 +12,9 @@ export const pool = new Pool({
   connectionTimeoutMillis: 5000   // Fail if can't connect in 5s
 });
 
+
+
+//everything below this is obsolete
 export async function getCompanyName(pool, companyId) {
   const result = await pool.query(
     `SELECT name FROM users WHERE id = $1 AND is_company = true`,

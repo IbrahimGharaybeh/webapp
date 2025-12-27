@@ -24,6 +24,7 @@ services:
     #volumes:
       #- ./backend:/app    do not uncomment these two lines.
       #- /app/node_modules they replace the volume mounts. caused me trouble with package installation
+      
   frontend:
     build:
       context: ./frontend
@@ -39,9 +40,9 @@ services:
      secrets:
        - db-password
      volumes:
-       - db-data:/var/lib/postgresql/
+       - db-data:/var/lib/postgresql/data
      environment:
-       - POSTGRES_DB=example
+       - POSTGRES_DB=postgre
        - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
      expose:
        - 5432
