@@ -384,13 +384,13 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
 
             <label>{l.nationality}</label>
             <TableDropDown 
-              csvPath='\csv\CNIA_NATS.txt'
+              csvPath='/csv/CNIA_NATS.txt'
               columns={2}
             />
 
             <label>{l.religionDen}</label>
             <TableDropDown 
-              csvPath='\csv\CNIA.RELIGION.txt'
+              csvPath='/csv/CNIA.RELIGION.txt'
               columns={2}
             />
 
@@ -410,7 +410,7 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
 
             <label>{l.occupation}</label>
             <TableDropDown 
-              csvPath='\csv\CNIA_JOBS.txt'
+              csvPath='/csv/CNIA_JOBS.txt'
               columns={2}
             />
 
@@ -531,3 +531,4 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
 }
 
 export default Photography;
+

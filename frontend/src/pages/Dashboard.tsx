@@ -84,7 +84,7 @@ function Dashboard() {
           </section>
 
           <section style={cardStyle}>
-            <TableDropDown csvPath="\csv\CNIA_JOBS.txt" columns={2}/>
+            <TableDropDown csvPath="/csv/CNIA_JOBS.txt" columns={2}/>
           </section>
 
           <section style={cardStyle}>
@@ -97,3 +97,4 @@ function Dashboard() {
 }
 
 export default Dashboard;
+

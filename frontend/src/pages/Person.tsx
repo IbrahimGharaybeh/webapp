@@ -563,14 +563,14 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
 
               <label>{l.nationality} *</label>
               <TableDropDown 
-                csvPath='\csv\CNIA_NATS.txt'
+                csvPath='/csv/CNIA_NATS.txt'
                 columns={2}
               />
               {errors.nationality && <span style={{ color: 'red', fontSize: '0.875rem' }}>{errors.nationality}</span>}
 
               <label>{l.religionDen}</label>
               <TableDropDown 
-                csvPath='\csv\CNIA.RELIGION.txt'
+                csvPath='/csv/CNIA.RELIGION.txt'
                 columns={2}
               />
 
@@ -591,7 +591,7 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
 
               <label>{l.occupation}</label>
               <TableDropDown 
-                csvPath='\csv\CNIA_JOBS.txt'
+                csvPath='/csv/CNIA_JOBS.txt'
                 columns={2}
               />
 
@@ -737,3 +737,4 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
 }
 
 export default Person;
+

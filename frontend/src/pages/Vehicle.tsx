@@ -428,13 +428,13 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
 
               <label>{l.nationality}</label>
               <TableDropDown 
-                csvPath='\csv\CNIA_NATS.txt'
+                csvPath='/csv/CNIA_NATS.txt'
                 columns={2}
               />
 
               <label>{l.religionDen}</label>
               <TableDropDown 
-                csvPath='\csv\CNIA.RELIGION.txt'
+                csvPath='/csv/CNIA.RELIGION.txt'
                 columns={2}
               />
 
@@ -454,7 +454,7 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
 
               <label>{l.occupation}</label>
               <TableDropDown 
-                csvPath='\csv\CNIA_JOBS.txt'
+                csvPath='/csv/CNIA_JOBS.txt'
                 columns={2}
               />
 
@@ -517,13 +517,13 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
 
               <label>{l.plateKind}</label>
               <TableDropDown 
-                csvPath='\csv\CNIA_JOBS.txt'
+                csvPath='/csv/CNIA_JOBS.txt'
                 columns={2}
               />
 
               <label>{l.nationalityVehicle}</label>
               <TableDropDown 
-                csvPath='\csv\CNIA_NATS.txt'
+                csvPath='/csv/CNIA_NATS.txt'
                 columns={2}
               />
 
@@ -557,13 +557,13 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
 
               <label>{l.placeOfIssue}</label>
               <TableDropDown 
-                csvPath='\csv\vehicleplaceofissue.txt'
+                csvPath='/csv/vehicleplaceofissue.txt'
                 columns={2}
               />
 
               <label>{l.plateKind}</label>
               <TableDropDown 
-                csvPath='\csv\platecolour.txt'
+                csvPath='/csv/platecolour.txt'
                 columns={2}
               />
 
@@ -657,3 +657,4 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
 }
 
 export default Vehicle;
+
