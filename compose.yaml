@@ -11,13 +11,20 @@ services:
   backend:
     build:
       context: ./backend
+    env_file:
+      - ./backend/.env
     environment:
       NODE_ENV: development
-      SUPABASE_URL: https://ghbwuiiefddfqmgiboww.supabase.co
-      SUPABASE_ANON_KEY: null
+      FRONTEND_URL: http://localhost:5173
+      PORT: 3001
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: postgres
 
     ports:
-      - 5000:5000
+      - 3001:3001
     depends_on:
        db:
          condition: service_healthy
@@ -31,6 +38,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5173:5173"
+    environment:
+      # URL exposed to the browser; default points at the published backend port on the host
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
   db:
      image: postgres
      restart: always
@@ -42,7 +52,7 @@ services:
      volumes:
        - db-data:/var/lib/postgresql/data
      environment:
-       - POSTGRES_DB=postgre
+       - POSTGRES_DB=postgres
        - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
      expose:
        - 5432

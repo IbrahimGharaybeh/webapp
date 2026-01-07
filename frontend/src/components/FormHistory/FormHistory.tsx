@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getApiUrl } from '../../lib/api';
 
 const PERMIT_TYPES: Record<number, string> = {
   1: 'Person',
@@ -57,11 +58,12 @@ function FormHistory({
   const fetchUserCompanies = async () => {
     try {
       // TODO: Replace with actual API call when authentication is ready
-      const response = await fetch('/api/data/companyretrieval', {
+      const response = await fetch(getApiUrl('/api/data/companyretrieval'), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        credentials: 'include'
       });
 
       if (response.ok) {
@@ -85,13 +87,14 @@ function FormHistory({
         params.append('company_id', selectedCompany);
       }
       
-      const url = `${apiEndpoint}?${params.toString()}`;
+      const url = `${getApiUrl(apiEndpoint)}?${params.toString()}`;
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        credentials: 'include'
       });
       
       if (!response.ok) {
@@ -126,11 +129,12 @@ function FormHistory({
     try {
       console.log('Fetching permit details for ID:', item.id);
       
-      const response = await fetch(`/api/permits/${item.id}`, {
+      const response = await fetch(getApiUrl(`/api/permits/${item.id}`), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        credentials: 'include'
       });
 
       if (!response.ok) {

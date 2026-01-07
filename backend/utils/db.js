@@ -1,15 +1,23 @@
 import pkg from 'pg';
-const {Pool} = pkg;
+const { Pool } = pkg;
+
+const {
+  DB_HOST = 'localhost',
+  DB_PORT = '5432',
+  DB_USER = 'postgres',
+  DB_PASSWORD = 'password',
+  DB_NAME = 'postgres'
+} = process.env;
 
 export const pool = new Pool({
-  host: 'db',
-  port: 5432,
-  database: 'postgres',
-  user: 'postgres',
-  password: 'password',
-  max: 20,                        // Max connections
-  idleTimeoutMillis: 30000,       // Close idle connections after 30s
-  connectionTimeoutMillis: 5000   // Fail if can't connect in 5s
+  host: DB_HOST,
+  port: Number(DB_PORT),
+  database: DB_NAME,
+  user: DB_USER,
+  password: DB_PASSWORD,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000
 });
 
 

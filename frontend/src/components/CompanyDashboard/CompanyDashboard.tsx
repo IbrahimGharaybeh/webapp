@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getApiUrl } from '../../lib/api';
 
 interface RepresentativeData {
   representative_name: string;
@@ -28,11 +29,12 @@ function CompanyDashboard({
       setError(null);
 
       // TODO: Replace with actual API call when endpoint is ready
-      const response = await fetch(apiEndpoint, {
+      const response = await fetch(getApiUrl(apiEndpoint), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        credentials: 'include'
       });
 
       if (!response.ok) {

@@ -1,7 +1,10 @@
-const API_URL = 'http://localhost:5000';
+const API_URL =
+  import.meta.env.NEXT_PUBLIC_API_URL ||
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:3001';
 
 export async function signUp(email: string, password: string, name: string = '') {
-  const response = await fetch(`http://localhost:5000/api/auth/sign-up/email`, {
+  const response = await fetch(`${API_URL}/api/auth/sign-up/email`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',

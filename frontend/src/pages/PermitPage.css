@@ -1,0 +1,68 @@
+.permit-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #0b1224 100%);
+  color: #e5e7eb;
+  padding: 32px 16px 48px;
+}
+
+.permit-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.permit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.permit-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 0.01em;
+}
+
+.permit-toggle {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #1f2937;
+  background: #111827;
+  color: #f8fafc;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+
+.permit-card {
+  background: #0b1224;
+  border: 1px solid #1f2937;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.28);
+}
+
+.permit-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.permit-section {
+  display: grid;
+  gap: 16px;
+}
+
+.permit-section legend {
+  font-weight: 700;
+  color: #e5e7eb;
+}
+
+.permit-section label {
+  display: block;
+  margin-bottom: 4px;
+  color: #cbd5e1;
+}

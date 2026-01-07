@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../lib/AuthContext';
+import './PermitPage.css';
 
 interface Company {
-  company_id: number;
-  company_name_ar: string;
-  company_name_en: string;
+  company: string;
+  name: string;
 }
 
 interface Representative {
@@ -27,7 +28,10 @@ interface ShipProps {
   initialLanguage?: 'en' | 'ar';
 }
 
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
+
 function Ship({ initialLanguage = 'en' }: ShipProps) {
+  const { user } = useAuth();
   const [language, setLanguage] = useState<'en' | 'ar'>(initialLanguage);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
@@ -150,15 +154,24 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
 
   const l = labels[language];
 
-  // Fetch companies on component mount
+  // Fetch companies for current user
   useEffect(() => {
     const fetchCompanies = async () => {
+      if (!user) {
+        setCompanies([]);
+        return;
+      }
       try {
         setLoading(true);
-        // TODO: Replace with actual API endpoint
-        const response = await fetch('/api/companies');
+        const response = await fetch(`${API_URL}/api/members/companyCheck`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ userId: user.id })
+        });
+        if (!response.ok) throw new Error('Failed to fetch companies');
         const data = await response.json();
-        setCompanies(data);
+        setCompanies(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Error fetching companies:', error);
         setCompanies([]);
@@ -168,7 +181,7 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
     };
 
     fetchCompanies();
-  }, []);
+  }, [user]);
 
   // Fetch representatives when company is selected
   useEffect(() => {
@@ -282,15 +295,17 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
   };
 
   return (
-    <div dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <div>
-        <button type="button" onClick={toggleLanguage}>
-          {l.switchLanguage}
-        </button>
-      </div>
+    <main className="permit-page">
+      <div className="permit-container" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="permit-header">
+          <h1 className="permit-title">{l.formTitle}</h1>
+          <button type="button" onClick={toggleLanguage} className="permit-toggle">
+            {l.switchLanguage}
+          </button>
+        </div>
 
+      <div className="permit-card">
       <form onSubmit={handleSubmit}>
-        <h1>{l.formTitle}</h1>
 
         <fieldset>
           <legend>{l.companyPermitInfo}</legend>
@@ -304,8 +319,8 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
             >
               <option value="">{l.selectCompany}</option>
               {companies.map((company) => (
-                <option key={company.company_id} value={company.company_id}>
-                  {language === 'ar' ? company.company_name_ar : company.company_name_en}
+                <option key={company.company} value={company.company}>
+                  {company.name}
                 </option>
               ))}
             </select>
@@ -512,7 +527,7 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
           ))}
         </fieldset>
 
-        <div>
+        <div className="permit-actions">
           <button type="submit" disabled={loading}>
             {loading ? 'Loading...' : l.print}
           </button>
@@ -521,7 +536,9 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
           </button>
         </div>
       </form>
+      </div>
     </div>
+    </main>
   );
 }
 

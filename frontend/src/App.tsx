@@ -7,20 +7,28 @@ import Ship from './pages/Ship';
 import Photography from './pages/Photography';
 import Dashboard from './pages/Dashboard';
 import LandingPage from './pages/LandingPage/LandingPage';
-import Login from './components/Login/Login';
-import Signup from './components/Signup/Signup';
+import SignInForm from './components/SignInForm';
+import SignUpForm from './components/SignUpForm';
+import ForgotPasswordForm from './components/ForgotPasswordForm';
+import ResetPasswordForm from './components/ResetPasswordForm';
+import UserControls from './pages/UserControls';
+import MemberControlPage from './pages/MemberControl';
+import MakeCompany from './pages/MakeCompany';
 import { AuthProvider } from './lib/AuthContext';
 import { ProtectedRoute } from './lib/ProtectedRoutes';
 
 function App() {
   return (
     <AuthProvider>
-\      <Navbar />
+      <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/landing" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<SignInForm />} />
+        <Route path="/signup" element={<SignUpForm />} />
+        <Route path="/forgot-password" element={<ForgotPasswordForm />} />
+        <Route path="/reset-password" element={<ResetPasswordForm />} />
+        <Route path="/user-controls" element={<UserControls />} />
 
         <Route path="/person" element={
           <ProtectedRoute><Person /></ProtectedRoute>
@@ -36,6 +44,12 @@ function App() {
         } />
         <Route path="/dashboard" element={
           <ProtectedRoute><Dashboard /></ProtectedRoute>
+        } />
+        <Route path="/member-control" element={
+          <ProtectedRoute><MemberControlPage /></ProtectedRoute>
+        } />
+        <Route path="/make-company" element={
+          <ProtectedRoute><MakeCompany /></ProtectedRoute>
         } />
       </Routes>
     </AuthProvider>

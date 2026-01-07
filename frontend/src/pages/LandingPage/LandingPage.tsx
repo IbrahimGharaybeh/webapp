@@ -86,7 +86,7 @@ const LandingPage = () => {
             <div className="feature-card">
               <div className="feature-icon">🔒</div>
               <h3>Secure</h3>
-              <p>Enterprise-grade security with Clerk authentication</p>
+              <p>Enterprise-grade security with modern authentication</p>
             </div>
             <div className="feature-card">
               <div className="feature-icon">📱</div>

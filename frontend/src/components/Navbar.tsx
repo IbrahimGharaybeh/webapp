@@ -23,6 +23,15 @@ function Navbar() {
       <Link to="/landing">
         <button>Landing</button>
       </Link>
+      <Link to="/member-control">
+        <button>Member Control</button>
+      </Link>
+      <Link to="/make-company">
+        <button>Create Company</button>
+      </Link>
+      <Link to="/user-controls">
+        <button>User Controls</button>
+      </Link>
 
       {user ? (
         <>

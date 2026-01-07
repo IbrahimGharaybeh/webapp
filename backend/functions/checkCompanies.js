@@ -5,7 +5,10 @@ export async function checkCompanies(userId) {
     try {
     console.log('userid recieved: ', userId);
     const result = await pool.query(
-        `select company from company_rep where rep=$1`,
+        `select cr.company, c.name
+         from company_rep cr
+         join company c on c.company_id = cr.company
+         where cr.rep=$1`,
         [userId]
     )
     console.log("THE RESULT: ", result);
@@ -17,7 +20,10 @@ export async function checkCompanies(userId) {
 //checks companies the user is or isn't an admin of depending on boolean admin
 export async function checkCompaniesAdmin(userId) {
     const result = await pool.query(
-        `select company from company_rep where rep=$1 and is_admin=$2`,
+        `select cr.company, c.name
+         from company_rep cr
+         join company c on c.company_id = cr.company
+         where cr.rep=$1 and cr.is_admin=$2`,
         [userId, true]
     )
     return result.rows;

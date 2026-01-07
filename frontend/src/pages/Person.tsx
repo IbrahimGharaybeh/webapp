@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../lib/AuthContext';
+import './PermitPage.css';
 import Form from '../components/Form/Form';
 import Dropdown from '../components/Dropdown/Dropdown';
 import DatePicker from '../components/DatePicker/DatePicker';
@@ -7,9 +9,8 @@ import Textarea from '../components/Textarea/Textarea';
 import { TableDropDown } from '../components/DropDownComplicated/TableDropDown';
 
 interface Company {
-  company_id: number;
-  company_name_ar: string;
-  company_name_en: string;
+  company: string;
+  name: string;
 }
 
 interface Representative {
@@ -38,7 +39,10 @@ interface PersonProps {
   initialLanguage?: 'en' | 'ar';
 }
 
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
+
 function Person({ initialLanguage = 'en' }: PersonProps) {
+  const { user } = useAuth();
   const [language, setLanguage] = useState<'en' | 'ar'>(initialLanguage);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
@@ -77,6 +81,62 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
       contractLocationsDesc: ''
     }))
   });
+
+  const pageStyle: React.CSSProperties = {
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #0f172a 0%, #0b1224 100%)',
+    color: '#e5e7eb',
+    padding: '32px 16px'
+  };
+
+  const contentStyle: React.CSSProperties = {
+    maxWidth: '1100px',
+    margin: '0 auto',
+    display: 'grid',
+    gap: '16px'
+  };
+
+  const cardStyle: React.CSSProperties = {
+    background: '#0b1224',
+    border: '1px solid #1f2937',
+    borderRadius: '14px',
+    padding: '20px',
+    boxShadow: '0 25px 60px rgba(0,0,0,0.28)'
+  };
+
+  const headerStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px'
+  };
+
+  const titleStyle: React.CSSProperties = {
+    margin: 0,
+    fontSize: '28px',
+    fontWeight: 700,
+    color: '#f8fafc'
+  };
+
+  const toggleWrapStyle: React.CSSProperties = {
+    textAlign: 'right',
+    marginBottom: '1rem'
+  };
+
+  const toggleButtonStyle: React.CSSProperties = {
+    padding: '10px 12px',
+    borderRadius: '10px',
+    border: '1px solid #1f2937',
+    background: '#111827',
+    color: '#f8fafc',
+    cursor: 'pointer',
+    boxShadow: '0 10px 30px rgba(0,0,0,0.25)'
+  };
+
+  const sectionStyle: React.CSSProperties = {
+    display: 'grid',
+    gap: '16px'
+  };
 
   const labels = {
     en: {
@@ -197,18 +257,26 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
 
   const l = labels[language];
 
-  // Fetch companies on component mount
+  // Fetch companies for current user
   useEffect(() => {
     const fetchCompanies = async () => {
+      if (!user) {
+        setCompanies([]);
+        return;
+      }
       try {
         setLoading(true);
-        // TODO: Replace with actual API endpoint
-        const response = await fetch('/api/companies');
+        const response = await fetch(`${API_URL}/api/members/companyCheck`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ userId: user.id })
+        });
+        if (!response.ok) throw new Error('Failed to fetch companies');
         const data = await response.json();
-        setCompanies(data);
+        setCompanies(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Error fetching companies:', error);
-        // Set empty array on error
         setCompanies([]);
       } finally {
         setLoading(false);
@@ -216,7 +284,7 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
     };
 
     fetchCompanies();
-  }, []);
+  }, [user]);
 
   // Fetch representatives when company is selected
   useEffect(() => {
@@ -392,15 +460,17 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
   };
 
   return (
-    <div dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
-        <button type="button" onClick={toggleLanguage}>
-          {l.switchLanguage}
-        </button>
-      </div>
+    <main className="permit-page">
+      <div className="permit-container" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="permit-header">
+          <h1 className="permit-title">{l.formTitle}</h1>
+          <button type="button" onClick={toggleLanguage} className="permit-toggle">
+            {l.switchLanguage}
+          </button>
+        </div>
 
+      <div className="permit-card">
       <Form onSubmit={handleSubmit}>
-        <h1>{l.formTitle}</h1>
 
         {submitSuccess && (
           <div style={{ padding: '1rem', backgroundColor: '#d4edda', color: '#155724', marginBottom: '1rem', borderRadius: '4px' }}>
@@ -423,9 +493,9 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
               value={formData.companyName}
               onChange={handleChange}
               options={companies.map(company => ({
-                code: company.company_id,
-                en: company.company_name_en,
-                ar: company.company_name_ar
+                code: company.company,
+                en: company.name,
+                ar: company.name
               }))}
               language={language}
               placeholder={l.selectCompany}
@@ -648,7 +718,7 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
           ))}
         </fieldset>
 
-        <div>
+        <div className="permit-actions">
           <button type="submit" disabled={loading}>
             {loading ? l.loading : l.submit}
           </button>
@@ -660,7 +730,9 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
           </button>
         </div>
       </Form>
+      </div>
     </div>
+    </main>
   );
 }
 
