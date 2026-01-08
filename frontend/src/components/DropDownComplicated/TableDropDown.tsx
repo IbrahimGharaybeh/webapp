@@ -17,9 +17,16 @@ type DropdownItem = DropdownItem2Col | DropdownItem3Col;
 interface TableDropDown {
   csvPath: string;
   columns: 2 | 3;
+  value?: string;
+  onSelect?: (code: string, name: string) => void;
 }
 
-export const TableDropDown: React.FC<TableDropDown> = ({ csvPath, columns }) => {
+export const TableDropDown: React.FC<TableDropDown> = ({
+  csvPath,
+  columns,
+  value,
+  onSelect
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [codeFilter, setCodeFilter] = useState('');
   const [nameFilter, setNameFilter] = useState('');
@@ -138,12 +145,25 @@ export const TableDropDown: React.FC<TableDropDown> = ({ csvPath, columns }) => 
     }
   }, [codeFilter, items]);
 
+  useEffect(() => {
+    if (typeof value === 'string' && value !== selectedValue) {
+      setSelectedValue(value);
+    }
+  }, [value, selectedValue]);
+
   const handleSelectItem = useCallback((item: DropdownItem) => {
-    setSelectedValue(item.code.toString());
+    const code = item.code.toString();
+    const name =
+      columns === 2
+        ? (item as DropdownItem2Col).name
+        : (item as DropdownItem3Col).nameAr;
+
+    setSelectedValue(code);
     setIsOpen(false);
     setCodeFilter('');
     setNameFilter('');
-  }, []);
+    onSelect?.(code, name);
+  }, [columns, onSelect]);
 
   if (loading) {
     return <div className="dropdown-loading">Loading...</div>;

@@ -7,16 +7,11 @@ import DatePicker from '../components/DatePicker/DatePicker';
 import Input from '../components/Input/Input';
 import Textarea from '../components/Textarea/Textarea';
 import { TableDropDown } from '../components/DropDownComplicated/TableDropDown';
+import SubmitChoiceModal from '../components/SubmitChoiceModal';
 
 interface Company {
   company: string;
   name: string;
-}
-
-interface Representative {
-  rep_id: number;
-  rep_name_ar: string;
-  rep_name_en: string;
 }
 
 interface Religion {
@@ -31,10 +26,6 @@ interface PermittedLocation {
   contractLocationsDesc: string;
 }
 
-interface FormErrors {
-  [key: string]: string;
-}
-
 interface PersonProps {
   initialLanguage?: 'en' | 'ar';
 }
@@ -45,15 +36,15 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
   const { user } = useAuth();
   const [language, setLanguage] = useState<'en' | 'ar'>(initialLanguage);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [representatives, setRepresentatives] = useState<Representative[]>([]);
   const [religions, setReligions] = useState<Religion[]>([]);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<FormErrors>({});
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [showSubmitChoice, setShowSubmitChoice] = useState(false);
+  const [isDraftChoice, setIsDraftChoice] = useState<boolean | null>(null);
 
   const [formData, setFormData] = useState({
     companyName: '',
-    representative: '',
+    representative: user?.id ?? '',
     permitType: '',
     transactionType: '',
     unifiedNo: '',
@@ -61,9 +52,11 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
     nationality: '',
     religionDen: '',
     passportNo: '',
+    passportExpiryDate: '',
     fullResidenceNo: '',
     occupation: '',
     emiratesIdNo: '',
+    molNo: '',
     mobileNo: '',
     permissionNo: '',
     dob: '',
@@ -149,9 +142,11 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
       nationality: 'Nationality',
       religionDen: 'Religion/Den',
       passportNo: 'Passport No',
+      passportExpiryDate: 'Passport Expiry Date',
       fullResidenceNo: 'Full Residence No',
       occupation: 'Occupation',
       emiratesIdNo: 'Emirates ID No.',
+      molNo: 'MOL No.',
       mobileNo: 'Mobile No.',
       permissionNo: 'Permission No.',
       dob: 'Date of Birth',
@@ -175,13 +170,13 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
       print: 'Print',
       clear: 'Clear',
       submit: 'Submit',
+      autoFillSubmit: 'Auto-fill & Submit',
       selectCompany: '-- Select a company --',
       select: '-- Select --',
       switchLanguage: 'عربي',
       loading: 'Loading...',
       submitSuccess: 'Form submitted successfully!',
-      submitError: 'Error submitting form. Please try again.',
-      required: 'This field is required'
+      submitError: 'Error submitting form. Please try again.'
     },
     ar: {
       companyName: 'اسم الشركة',
@@ -193,9 +188,11 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
       nationality: 'الجنسية',
       religionDen: 'الديانة/الطائفة',
       passportNo: 'رقم الجواز',
+      passportExpiryDate: 'Passport Expiry Date',
       fullResidenceNo: 'رقم الإقامة الكامل',
       occupation: 'المهنة',
       emiratesIdNo: 'رقم الهوية الإماراتية',
+      molNo: 'MOL No.',
       mobileNo: 'رقم الجوال',
       permissionNo: 'رقم الإذن',
       dob: 'تاريخ الميلاد',
@@ -219,13 +216,13 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
       print: 'طباعة',
       clear: 'تفريغ الحقول',
       submit: 'إرسال',
+      autoFillSubmit: 'Auto-fill & Submit',
       selectCompany: '-- اختر شركة --',
       select: '-- اختر --',
       switchLanguage: 'English',
       loading: 'جاري التحميل...',
       submitSuccess: 'تم إرسال النموذج بنجاح!',
-      submitError: 'خطأ في إرسال النموذج. يرجى المحاولة مرة أخرى.',
-      required: 'هذا الحقل مطلوب'
+      submitError: 'خطأ في إرسال النموذج. يرجى المحاولة مرة أخرى.'
     }
   };
 
@@ -286,31 +283,9 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
     fetchCompanies();
   }, [user]);
 
-  // Fetch representatives when company is selected
   useEffect(() => {
-    const fetchRepresentatives = async () => {
-      if (!formData.companyName) {
-        setRepresentatives([]);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        // TODO: Replace with actual API endpoint
-        const response = await fetch(`/api/representatives?companyId=${formData.companyName}`);
-        const data = await response.json();
-        setRepresentatives(data);
-      } catch (error) {
-        console.error('Error fetching representatives:', error);
-        setRepresentatives([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRepresentatives();
-  }, [formData.companyName]);
-
+    setFormData(prev => ({ ...prev, representative: user?.id ?? '' }));
+  }, [user]);
   // Fetch religions on component mount
   useEffect(() => {
     const fetchReligions = async () => {
@@ -334,15 +309,6 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Clear error for this field when user starts typing
-    if (errors[name]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
   };
 
   const handleLocationChange = (index: number, field: string, value: string) => {
@@ -351,35 +317,10 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
     setFormData(prev => ({ ...prev, permittedLocations: newLocations }));
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    // Required fields validation
-    if (!formData.companyName) newErrors.companyName = l.required;
-    if (!formData.representative) newErrors.representative = l.required;
-    if (!formData.permitType) newErrors.permitType = l.required;
-    if (!formData.transactionType) newErrors.transactionType = l.required;
-    if (!formData.unifiedNo) newErrors.unifiedNo = l.required;
-    if (!formData.nameArabic) newErrors.nameArabic = l.required;
-    if (!formData.nationality) newErrors.nationality = l.required;
-    if (!formData.passportNo) newErrors.passportNo = l.required;
-    if (!formData.emiratesIdNo) newErrors.emiratesIdNo = l.required;
-    if (!formData.mobileNo) newErrors.mobileNo = l.required;
-    if (!formData.dob) newErrors.dob = l.required;
-
-    // Email validation
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = language === 'en' ? 'Invalid email format' : 'صيغة البريد الإلكتروني غير صحيحة';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleClear = () => {
     setFormData({
       companyName: '',
-      representative: '',
+      representative: user?.id ?? '',
       permitType: '',
       transactionType: '',
       unifiedNo: '',
@@ -387,9 +328,11 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
       nationality: '',
       religionDen: '',
       passportNo: '',
+      passportExpiryDate: '',
       fullResidenceNo: '',
       occupation: '',
       emiratesIdNo: '',
+      molNo: '',
       mobileNo: '',
       permissionNo: '',
       dob: '',
@@ -407,37 +350,40 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
         contractLocationsDesc: ''
       }))
     });
-    setErrors({});
     setSubmitSuccess(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
+  const submitPayload = async (payload: typeof formData, draftChoice: boolean | null) => {
+    if (draftChoice === null) return;
     try {
       setLoading(true);
       setSubmitSuccess(false);
+      console.log('Submitting person form payload:', payload);
       
       // TODO: Replace with actual API endpoint
-      const response = await fetch('/api/permits/person', {
+      const response = await fetch(`${API_URL}/api/data/person`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        credentials: 'include',
+        body: JSON.stringify({
+          ...payload,
+          companyId: payload.companyName,
+          isDraft: draftChoice
+        }),
       });
 
       if (!response.ok) {
         throw new Error('Submission failed');
       }
 
-      const result = await response.json();
-      console.log('Form submitted successfully:', result);
-      
+      if (!draftChoice) {
+        const pdfBlob = await response.blob();
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+      }
+
       setSubmitSuccess(true);
       
       // Optionally clear form after successful submission
@@ -445,10 +391,71 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
       
     } catch (error) {
       console.error('Error submitting form:', error);
-      setErrors({ submit: l.submitError });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsDraftChoice(null);
+    setShowSubmitChoice(true);
+  };
+
+  const handleAutoFillSubmit = async () => {
+    if (!companies.length) return;
+
+    const randomDigits = (length: number) =>
+      Array.from({ length }, () => Math.floor(Math.random() * 10)).join('');
+    const formatDate = (date: Date) => date.toISOString().slice(0, 10);
+    const now = new Date();
+    const dobDate = new Date(now);
+    dobDate.setFullYear(now.getFullYear() - 30);
+    const expiryDate = new Date(now);
+    expiryDate.setFullYear(now.getFullYear() + 1);
+
+    const randomData = {
+      ...formData,
+      companyName: companies[1]?.company ?? '',
+      permitType: String(permitTypes[0]?.code ?? ''),
+      transactionType: String(transactionTypes[0]?.code ?? ''),
+      unifiedNo: randomDigits(9),
+      nameArabic: 'Test User',
+      nationality: '101',
+      religionDen: '1',
+      passportNo: randomDigits(9),
+      passportExpiryDate: formatDate(expiryDate),
+      fullResidenceNo: randomDigits(10),
+      occupation: '1',
+      emiratesIdNo: randomDigits(15),
+      molNo: randomDigits(10),
+      mobileNo: randomDigits(10),
+      permissionNo: randomDigits(8),
+      dob: formatDate(dobDate),
+      expiryDate1: formatDate(expiryDate),
+      expiryDate2: formatDate(expiryDate),
+      email: `test${randomDigits(4)}@example.com`,
+      instagram: '@test',
+      twitter: '@test',
+      facebook: 'test',
+      others: '',
+      remarks: 'Auto-filled',
+      permittedLocations: Array.from({ length: 6 }, (_, index) => ({
+        contractNo: randomDigits(6),
+        contractLocationsNo: randomDigits(4),
+        contractLocationsDesc: `Location ${index + 1}`
+      }))
+    };
+
+    setFormData(randomData);
+    setIsDraftChoice(null);
+    setShowSubmitChoice(true);
+  };
+
+  const handleChoice = async (draftChoice: boolean) => {
+    setIsDraftChoice(draftChoice);
+    setShowSubmitChoice(false);
+    await submitPayload(formData, draftChoice);
   };
 
   const handlePrint = () => {
@@ -478,16 +485,10 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
           </div>
         )}
 
-        {errors.submit && (
-          <div style={{ padding: '1rem', backgroundColor: '#f8d7da', color: '#721c24', marginBottom: '1rem', borderRadius: '4px' }}>
-            {errors.submit}
-          </div>
-        )}
-
         <fieldset>
           <legend>{l.companyPermitInfo}</legend>
           <div>
-            <label>{l.companyName} *</label>
+            <label>{l.companyName}</label>
             <Dropdown
               name="companyName"
               value={formData.companyName}
@@ -500,24 +501,7 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
               language={language}
               placeholder={l.selectCompany}
             />
-            {errors.companyName && <span style={{ color: 'red', fontSize: '0.875rem' }}>{errors.companyName}</span>}
-
-            <label>{l.representative} *</label>
-            <Dropdown
-              name="representative"
-              value={formData.representative}
-              onChange={handleChange}
-              options={representatives.map(rep => ({
-                code: rep.rep_id,
-                en: rep.rep_name_en,
-                ar: rep.rep_name_ar
-              }))}
-              language={language}
-              placeholder={l.select}
-            />
-            {errors.representative && <span style={{ color: 'red', fontSize: '0.875rem' }}>{errors.representative}</span>}
-
-            <label>{l.permitType} *</label>
+            <label>{l.permitType}</label>
             <Dropdown
               name="permitType"
               value={formData.permitType}
@@ -526,9 +510,7 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
               language={language}
               placeholder={l.select}
             />
-            {errors.permitType && <span style={{ color: 'red', fontSize: '0.875rem' }}>{errors.permitType}</span>}
-
-            <label>{l.transactionType} *</label>
+            <label>{l.transactionType}</label>
             <Dropdown
               name="transactionType"
               value={formData.transactionType}
@@ -537,7 +519,6 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
               language={language}
               placeholder={l.select}
             />
-            {errors.transactionType && <span style={{ color: 'red', fontSize: '0.875rem' }}>{errors.transactionType}</span>}
           </div>
         </fieldset>
 
@@ -545,43 +526,47 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
           <fieldset>
             <legend>{l.applicantDetails}</legend>
             <div>
-              <label>{l.unifiedNo} *</label>
+              <label>{l.unifiedNo}</label>
               <Input
                 name="unifiedNo"
                 value={formData.unifiedNo}
                 onChange={handleChange}
               />
-              {errors.unifiedNo && <span style={{ color: 'red', fontSize: '0.875rem' }}>{errors.unifiedNo}</span>}
-
-              <label>{l.nameArabic} *</label>
+              <label>{l.nameArabic}</label>
               <Input
                 name="nameArabic"
                 value={formData.nameArabic}
                 onChange={handleChange}
               />
-              {errors.nameArabic && <span style={{ color: 'red', fontSize: '0.875rem' }}>{errors.nameArabic}</span>}
-
-              <label>{l.nationality} *</label>
+              <label>{l.nationality}</label>
               <TableDropDown 
                 csvPath='/csv/CNIA_NATS.txt'
                 columns={2}
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, nationality: code }))
+                }
               />
-              {errors.nationality && <span style={{ color: 'red', fontSize: '0.875rem' }}>{errors.nationality}</span>}
-
               <label>{l.religionDen}</label>
               <TableDropDown 
                 csvPath='/csv/CNIA.RELIGION.txt'
                 columns={2}
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, religionDen: code }))
+                }
               />
 
-              <label>{l.passportNo} *</label>
+              <label>{l.passportNo}</label>
               <Input
                 name="passportNo"
                 value={formData.passportNo}
                 onChange={handleChange}
               />
-              {errors.passportNo && <span style={{ color: 'red', fontSize: '0.875rem' }}>{errors.passportNo}</span>}
-
+              <label>{l.passportExpiryDate}</label>
+              <DatePicker
+                name="passportExpiryDate"
+                value={formData.passportExpiryDate}
+                onChange={handleChange}
+              />
               <label>{l.fullResidenceNo}</label>
               <Input
                 name="fullResidenceNo"
@@ -593,24 +578,29 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
               <TableDropDown 
                 csvPath='/csv/CNIA_JOBS.txt'
                 columns={2}
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, occupation: code }))
+                }
               />
 
-              <label>{l.emiratesIdNo} *</label>
+              <label>{l.emiratesIdNo}</label>
               <Input
                 name="emiratesIdNo"
                 value={formData.emiratesIdNo}
                 onChange={handleChange}
               />
-              {errors.emiratesIdNo && <span style={{ color: 'red', fontSize: '0.875rem' }}>{errors.emiratesIdNo}</span>}
-
-              <label>{l.mobileNo} *</label>
+              <label>{l.molNo}</label>
+              <Input
+                name="molNo"
+                value={formData.molNo}
+                onChange={handleChange}
+              />
+              <label>{l.mobileNo}</label>
               <Input
                 name="mobileNo"
                 value={formData.mobileNo}
                 onChange={handleChange}
               />
-              {errors.mobileNo && <span style={{ color: 'red', fontSize: '0.875rem' }}>{errors.mobileNo}</span>}
-
               <label>{l.permissionNo}</label>
               <Input
                 name="permissionNo"
@@ -618,14 +608,12 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
                 onChange={handleChange}
               />
 
-              <label>{l.dob} *</label>
+              <label>{l.dob}</label>
               <DatePicker
                 name="dob"
                 value={formData.dob}
                 onChange={handleChange}
               />
-              {errors.dob && <span style={{ color: 'red', fontSize: '0.875rem' }}>{errors.dob}</span>}
-
               <label>{l.expiryDate1}</label>
               <DatePicker
                 name="expiryDate1"
@@ -651,8 +639,6 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
                 value={formData.email}
                 onChange={handleChange}
               />
-              {errors.email && <span style={{ color: 'red', fontSize: '0.875rem' }}>{errors.email}</span>}
-
               <label>{l.instagram}</label>
               <Input
                 name="instagram"
@@ -722,6 +708,9 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
           <button type="submit" disabled={loading}>
             {loading ? l.loading : l.submit}
           </button>
+          <button type="button" onClick={handleAutoFillSubmit} disabled={loading || !companies.length}>
+            {l.autoFillSubmit || 'Auto-fill & Submit'}
+          </button>
           <button type="button" onClick={handlePrint}>
             {l.print}
           </button>
@@ -730,6 +719,14 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
           </button>
         </div>
       </Form>
+      <SubmitChoiceModal
+        open={showSubmitChoice}
+        onCancel={() => {
+          setShowSubmitChoice(false);
+          setIsDraftChoice(null);
+        }}
+        onChoose={handleChoice}
+      />
       </div>
     </div>
     </main>

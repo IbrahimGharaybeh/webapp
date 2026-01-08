@@ -1,6 +1,63 @@
 import { Router } from 'express';
 import { getCompanyName, verifyCompanyOwnership } from '../utils/db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { PersonFormFiller } from '../form/PersonFormFiller.js';
+
+async function insertPersonPermit(client, userId, body) {
+  const companyResult = await client.query(
+    `SELECT name, code FROM company WHERE company_id = $1`,
+    [body.companyId]
+  );
+  const companyName = companyResult.rows[0]?.name;
+  const companyCode = companyResult.rows[0]?.code ?? '';
+  if (!companyName) {
+    throw new Error('Invalid company ID');
+  }
+
+  const lookupLabel = async (table, code) => {
+    if (!code) return '';
+    const result = await client.query(
+      `SELECT arabic FROM ${table} WHERE code = $1`,
+      [code]
+    );
+    return result.rows[0]?.arabic ?? '';
+  };
+
+  const [nationalityName, occupationName, religionName] = await Promise.all([
+    lookupLabel('nationalities', body.nationality),
+    lookupLabel('occupations', body.occupation),
+    lookupLabel('religions', body.religionDen)
+  ]);
+
+  const insertResult = await client.query(
+    `INSERT INTO person_permits (
+      user_id, company_name, representative, permit_type, transaction_type,
+      unified_no, name_arabic, nationality, religion_den,
+      passport_no, passportexpirydate, full_residence_no, occupation, emirates_id_no, mol_no,
+      mobile_no, permission_no, dob, expiry_date1, expiry_date2,
+      email, instagram, twitter, facebook, others, remarks, permitted_locations
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
+    RETURNING *`,
+    [
+      userId, companyName, body.representative, body.permitType,
+      body.transactionType, body.unifiedNo, body.nameArabic,
+      body.nationality, body.religionDen, body.passportNo,
+      body.passportExpiryDate, body.fullResidenceNo, body.occupation, body.emiratesIdNo,
+      body.molNo, body.mobileNo, body.permissionNo, body.dob,
+      body.expiryDate1, body.expiryDate2, body.email,
+      body.instagram, body.twitter, body.facebook,
+      body.others, body.remarks, JSON.stringify(body.permittedLocations || [])
+    ]
+  );
+
+  return {
+    permit: insertResult.rows[0],
+    companyCode,
+    nationalityName,
+    occupationName,
+    religionName
+  };
+}
 
 export default function(pool) {
   const router = Router();
@@ -11,35 +68,15 @@ export default function(pool) {
     try {
       const userId = req.user.id;
 
-      const companyName = await getCompanyName(pool, req.body.companyId);
-      if (!companyName) {
-        return res.status(400).json({ error: 'Invalid company ID' });
-      }
-
       await client.query('BEGIN');
 
-      const insertResult = await client.query(
-        `INSERT INTO person_permits (
-          user_id, company_name, representative, permit_type, transaction_type,
-          unified_no, name_arabic, nationality, religion_den,
-          passport_no, full_residence_no, occupation, emirates_id_no,
-          mobile_no, permission_no, dob, expiry_date1, expiry_date2,
-          email, instagram, twitter, facebook, others, remarks, permitted_locations
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
-        RETURNING *`,
-        [
-          userId, companyName, req.body.representative, req.body.permitType,
-          req.body.transactionType, req.body.unifiedNo, req.body.nameArabic,
-          req.body.nationality, req.body.religionDen, req.body.passportNo,
-          req.body.fullResidenceNo, req.body.occupation, req.body.emiratesIdNo,
-          req.body.mobileNo, req.body.permissionNo, req.body.dob,
-          req.body.expiryDate1, req.body.expiryDate2, req.body.email,
-          req.body.instagram, req.body.twitter, req.body.facebook,
-          req.body.others, req.body.remarks, JSON.stringify(req.body.permittedLocations || [])
-        ]
-      );
-
-      const permit = insertResult.rows[0];
+      const {
+        permit,
+        companyCode,
+        nationalityName,
+        occupationName,
+        religionName
+      } = await insertPersonPermit(client, userId, req.body);
 
       await client.query(
         `INSERT INTO permit_representative_index (permit_type, rep, company_id, permit_id, is_draft)
@@ -48,6 +85,27 @@ export default function(pool) {
       );
 
       await client.query('COMMIT');
+
+      console.log('Inserted person_permits row:', permit);
+      if (req.body.isDraft === false) {
+        const pdfBuffer = Buffer.from(
+          await PersonFormFiller({
+            ...req.body,
+            companyName: permit.company_name,
+            companyNameCode: companyCode,
+            nationalityCode: req.body.nationality,
+            religionCode: req.body.religionDen,
+            occupationCode: req.body.occupation,
+            nationality: nationalityName,
+            religionDen: religionName,
+            occupation: occupationName
+          })
+        );
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline');
+        res.status(201).send(pdfBuffer);
+        return;
+      }
 
       res.status(201).json({ success: true, message: "saved to database", data: permit });
     } catch (error) {

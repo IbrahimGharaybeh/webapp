@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { checkCompanies, checkCompaniesAdmin } from '../functions/checkCompanies.js';
 import { makeCompany } from '../functions/makeCompany.js';
 import { inviteMember, removeMember } from '../functions/companyMemberControls.js';
+import { checkAdmin } from '../functions/checkAdmin.js';
+import { pool } from '../utils/db.js';
 
 const isUuid = (value) => typeof value === 'string' && /^[0-9a-fA-F-]{36}$/.test(value);
 
@@ -12,7 +14,8 @@ export default function companyRoutes() {
     try {
       const userId = req.body.userId;
       const name = req.body.name;
-      const rows = await makeCompany(userId, name);
+      const code = req.body.code;
+      const rows = await makeCompany(userId, name, code);
       res.json(rows);
     } catch (error) {
       console.error('makeCompany failed', error);
@@ -43,6 +46,38 @@ export default function companyRoutes() {
     } catch (err) {
       console.error('companyCheckAdmin failed', err);
       res.status(500).json({ error: 'Failed to check companies for admin', details: err.message });
+    }
+  });
+
+  router.post('/companyRepresentatives', async (req, res) => {
+    try {
+      const adminId = req.body.adminId;
+      const companyId = req.body.companyId;
+      if (!adminId || !companyId) {
+        return res.status(400).json({ error: 'adminId and companyId are required' });
+      }
+      if (![adminId, companyId].every(isUuid)) {
+        return res.status(400).json({ error: 'adminId and companyId must be UUIDs' });
+      }
+
+      const isAdmin = await checkAdmin(adminId, companyId);
+      if (!isAdmin) {
+        return res.status(403).json({ error: 'Authorization denied' });
+      }
+
+      const result = await pool.query(
+        `select u.id, u.name, u.username, u.email, cr.is_admin
+         from company_rep cr
+         join users u on u.id = cr.rep
+         where cr.company = $1
+         order by u.name nulls last, u.email`,
+        [companyId]
+      );
+
+      res.json(result.rows);
+    } catch (err) {
+      console.error('companyRepresentatives failed', err);
+      res.status(500).json({ error: 'Failed to load representatives', details: err.message });
     }
   });
 

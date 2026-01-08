@@ -6,6 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
 function MakeCompany() {
   const { user } = useAuth();
   const [name, setName] = useState('');
+  const [code, setCode] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -19,6 +20,10 @@ function MakeCompany() {
       setStatus('Company name is required.');
       return;
     }
+    if (!code.trim()) {
+      setStatus('Company code is required.');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -27,7 +32,7 @@ function MakeCompany() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ userId: user.id, name }),
+        body: JSON.stringify({ userId: user.id, name, code }),
       });
       if (!res.ok) {
         const text = await res.text();
@@ -37,6 +42,7 @@ function MakeCompany() {
       const createdName = data?.[0]?.name || name;
       setStatus(`Created company "${createdName}".`);
       setName('');
+      setCode('');
     } catch (err: any) {
       setStatus(`Error: ${err.message}`);
     } finally {
@@ -109,6 +115,18 @@ function MakeCompany() {
     <main style={pageStyle}>
       <form style={cardStyle} onSubmit={handleSubmit}>
         <h1 style={titleStyle}>Create Company</h1>
+        <div style={{ display: 'grid', gap: '8px' }}>
+          <label style={labelStyle} htmlFor="company-code">Company Code</label>
+          <input
+            id="company-code"
+            type="text"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="Enter company code"
+            style={inputStyle}
+            disabled={loading}
+          />
+        </div>
         <div style={{ display: 'grid', gap: '8px' }}>
           <label style={labelStyle} htmlFor="company-name">Company Name</label>
           <input

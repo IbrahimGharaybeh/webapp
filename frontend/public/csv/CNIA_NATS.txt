@@ -1,4 +1,4 @@
-KEEP THIS ROW EMPTY. nationality dropdown component skips the first line because it assumes a header
+code, arabic, english
 100,"الدول العربية","ARABIC COUNTRY",
 101,"الامارات","U.A.E",
 103,"السعوديه","SAUDI ARABIAN",

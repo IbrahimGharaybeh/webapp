@@ -15,14 +15,14 @@ async function indexingCompany(createdBy, companyId) {
   return rows.rows;
 }
 
-export async function makeCompany(userId, name) {
-  console.log("makeCompany called with:", { userId, name });
+export async function makeCompany(userId, name, code) {
+  console.log("makeCompany called with:", { userId, name, code });
 
   const rows = await pool.query(
-    `INSERT INTO company (name, created_by)
-     VALUES ($1, $2)
+    `INSERT INTO company (name, code, created_by)
+     VALUES ($1, $2, $3)
      RETURNING *`,
-    [name, userId]
+    [name, code, userId]
   );
 
   console.log("makeCompany pool.query result:", rows);
