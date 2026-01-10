@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import FormHistory from '../components/FormHistory/FormHistory';
-import { TableDropDown } from '../components/DropDownComplicated/TableDropDown';
-import MemberControl from '../components/MemberControl/MemberControl';
 import { useAuth } from '../lib/AuthContext';
 import { getApiUrl } from '../lib/api';
 
@@ -18,6 +16,13 @@ type Representative = {
   is_admin?: boolean;
 };
 
+type PermitEntry = {
+  permitType: number;
+  permitId: number;
+  isDraft?: boolean;
+  permit?: unknown;
+};
+
 function Dashboard() {
   const { user, loading } = useAuth();
   const [adminCompanies, setAdminCompanies] = useState<Company[]>([]);
@@ -27,6 +32,12 @@ function Dashboard() {
   const [representativesByCompany, setRepresentativesByCompany] = useState<Record<string, Representative[]>>({});
   const [representativeLoading, setRepresentativeLoading] = useState<Record<string, boolean>>({});
   const [representativeErrors, setRepresentativeErrors] = useState<Record<string, string>>({});
+  const [permitsByCompany, setPermitsByCompany] = useState<Record<string, PermitEntry[]>>({});
+  const [permitLoading, setPermitLoading] = useState<Record<string, boolean>>({});
+  const [permitErrors, setPermitErrors] = useState<Record<string, string>>({});
+  const [permitNameFilters, setPermitNameFilters] = useState<Record<string, string>>({});
+  const [permitDraftFilters, setPermitDraftFilters] = useState<Record<string, string>>({});
+  const [permitTypeFilters, setPermitTypeFilters] = useState<Record<string, string>>({});
   const [expandedCompanyId, setExpandedCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -112,6 +123,38 @@ function Dashboard() {
       setRepresentativesByCompany((prev) => ({ ...prev, [companyId]: [] }));
     } finally {
       setRepresentativeLoading((prev) => ({ ...prev, [companyId]: false }));
+    }
+  };
+
+  const fetchCompanyPermits = async (companyId: string, adminId: string) => {
+    setPermitLoading((prev) => ({ ...prev, [companyId]: true }));
+    setPermitErrors((prev) => ({ ...prev, [companyId]: '' }));
+    try {
+      const response = await fetch(getApiUrl('/api/members/companyPermits'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ companyId, adminId })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setPermitsByCompany((prev) => ({
+        ...prev,
+        [companyId]: Array.isArray(data) ? data : []
+      }));
+    } catch (err) {
+      console.error('Failed to load permits', err);
+      setPermitErrors((prev) => ({
+        ...prev,
+        [companyId]: 'Unable to load permits.'
+      }));
+      setPermitsByCompany((prev) => ({ ...prev, [companyId]: [] }));
+    } finally {
+      setPermitLoading((prev) => ({ ...prev, [companyId]: false }));
     }
   };
 
@@ -240,6 +283,41 @@ function Dashboard() {
     gap: '4px',
   };
 
+  const permitRowStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: '2fr 1fr 1fr 1fr',
+    gap: '12px',
+    padding: '8px 10px',
+    borderBottom: '1px solid #1f2937',
+    color: '#cbd5f5',
+    fontSize: '12px',
+  };
+
+  const permitHeaderStyle: React.CSSProperties = {
+    ...permitRowStyle,
+    fontWeight: 600,
+    color: '#e2e8f0',
+    background: '#0f172a',
+  };
+
+  const permitCellStyle: React.CSSProperties = {
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  };
+
+  const permitTypeLabels: Record<number, string> = {
+    1: 'Person',
+    2: 'Vehicle',
+    3: 'Ship',
+    4: 'Photography',
+  };
+
+  const permitTypeOptions = Object.entries(permitTypeLabels).map(([value, label]) => ({
+    value,
+    label,
+  }));
+
   return (
     <main style={pageStyle}>
       <div style={containerStyle}>
@@ -295,14 +373,49 @@ function Dashboard() {
               const reps = representativesByCompany[company.company] || [];
               const isLoading = representativeLoading[company.company];
               const error = representativeErrors[company.company];
+              const hasPermitEntry = Object.prototype.hasOwnProperty.call(
+                permitsByCompany,
+                company.company
+              );
+              const permitList = permitsByCompany[company.company] || [];
+              const permitLoadingState = permitLoading[company.company];
+              const permitError = permitErrors[company.company];
+              const permitNameFilter = permitNameFilters[company.company] || '';
+              const permitDraftFilter = permitDraftFilters[company.company] || 'all';
+              const permitTypeFilter = permitTypeFilters[company.company] || 'all';
+              const filteredPermitList = permitList.filter((permit) => {
+                const permitData = permit.permit as Record<string, unknown> | null | undefined;
+                const nameArabic = (permitData?.name_arabic as string) ?? '';
+                const matchesName = permitNameFilter.trim().length === 0
+                  || nameArabic.toLowerCase().includes(permitNameFilter.trim().toLowerCase());
+                const matchesDraft =
+                  permitDraftFilter === 'all'
+                    ? true
+                    : permitDraftFilter === 'true'
+                      ? Boolean(permit.isDraft)
+                      : !permit.isDraft;
+                const matchesType =
+                  permitTypeFilter === 'all'
+                    ? true
+                    : String(permit.permitType) === permitTypeFilter;
+                return matchesName && matchesDraft && matchesType;
+              });
               const isExpanded = expandedCompanyId === company.company;
               return (
                 <div key={company.company} style={{ display: 'grid', gap: '10px' }}>
                   <div
                     style={rowStyle}
-                    onClick={() =>
-                      setExpandedCompanyId(isExpanded ? null : company.company)
-                    }
+                    onClick={() => {
+                      const nextExpanded = isExpanded ? null : company.company;
+                      setExpandedCompanyId(nextExpanded);
+                      if (!isExpanded && user?.id) {
+                        const hasPermits = Boolean(permitsByCompany[company.company]);
+                        const isPermitsLoading = Boolean(permitLoading[company.company]);
+                        if (!hasPermits && !isPermitsLoading) {
+                          void fetchCompanyPermits(company.company, user.id);
+                        }
+                      }
+                    }}
                   >
                     <span style={{ fontWeight: 600 }}>{company.name}</span>
                     <span style={{ color: '#94a3b8' }}>
@@ -311,6 +424,114 @@ function Dashboard() {
                   </div>
                   {isExpanded && (
                     <div style={{ display: 'grid', gap: '8px' }}>
+                      <div style={{ display: 'grid', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="Search by name..."
+                          value={permitNameFilter}
+                          onChange={(event) =>
+                            setPermitNameFilters((prev) => ({
+                              ...prev,
+                              [company.company]: event.target.value
+                            }))
+                          }
+                          style={{
+                            padding: '8px 10px',
+                            borderRadius: '8px',
+                            border: '1px solid #1f2937',
+                            background: '#0f172a',
+                            color: '#e2e8f0'
+                          }}
+                        />
+                        <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: '1fr 1fr' }}>
+                          <select
+                            value={permitTypeFilter}
+                            onChange={(event) =>
+                              setPermitTypeFilters((prev) => ({
+                                ...prev,
+                                [company.company]: event.target.value
+                              }))
+                            }
+                            style={{
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid #1f2937',
+                              background: '#0f172a',
+                              color: '#e2e8f0'
+                            }}
+                          >
+                            <option value="all">All Permit Types</option>
+                            {permitTypeOptions.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={permitDraftFilter}
+                            onChange={(event) =>
+                              setPermitDraftFilters((prev) => ({
+                                ...prev,
+                                [company.company]: event.target.value
+                              }))
+                            }
+                            style={{
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: '1px solid #1f2937',
+                              background: '#0f172a',
+                              color: '#e2e8f0'
+                            }}
+                          >
+                            <option value="all">All Draft States</option>
+                            <option value="true">Draft</option>
+                            <option value="false">Final</option>
+                          </select>
+                        </div>
+                      </div>
+                      {hasPermitEntry &&
+                        !permitLoadingState &&
+                        !permitError &&
+                        filteredPermitList.length === 0 && (
+                        <p style={{ margin: 0, color: '#94a3b8' }}>
+                          No permits found.
+                        </p>
+                      )}
+                      {permitLoadingState && (
+                        <p style={{ margin: 0, color: '#94a3b8' }}>
+                          Loading permits...
+                        </p>
+                      )}
+                      {!permitLoadingState && permitError && (
+                        <p style={{ margin: 0, color: '#fda4af' }}>{permitError}</p>
+                      )}
+                      {!permitLoadingState && !permitError && filteredPermitList.length > 0 && (
+                        <div style={{ border: '1px solid #1f2937', borderRadius: '10px', overflow: 'hidden' }}>
+                          <div style={permitHeaderStyle}>
+                            <div style={permitCellStyle}>Name (Arabic)</div>
+                            <div style={permitCellStyle}>Permit Type</div>
+                            <div style={permitCellStyle}>Representative</div>
+                            <div style={permitCellStyle}>Is Draft</div>
+                          </div>
+                          {filteredPermitList.map((permit) => {
+                            const permitData = permit.permit as Record<string, unknown> | null | undefined;
+                            const nameArabic = (permitData?.name_arabic as string) ?? '—';
+                            const representative = (permit.repName as string) ??
+                              (permitData?.representative as string) ??
+                              '—';
+                            return (
+                              <div key={`${permit.permitType}-${permit.permitId}`} style={permitRowStyle}>
+                                <div style={permitCellStyle}>{nameArabic}</div>
+                                <div style={permitCellStyle}>
+                                  {permitTypeLabels[permit.permitType] || 'Unknown'}
+                                </div>
+                                <div style={permitCellStyle}>{representative}</div>
+                                <div style={permitCellStyle}>{permit.isDraft ? 'true' : 'false'}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                       {isLoading && (
                         <p style={{ margin: 0, color: '#94a3b8' }}>
                           Loading representatives...
@@ -348,14 +569,6 @@ function Dashboard() {
 
           <section style={cardStyle}>
             <FormHistory />
-          </section>
-
-          <section style={cardStyle}>
-            <TableDropDown csvPath="/csv/CNIA_JOBS.txt" columns={2}/>
-          </section>
-
-          <section style={cardStyle}>
-            <MemberControl />
           </section>
         </div>
       </div>

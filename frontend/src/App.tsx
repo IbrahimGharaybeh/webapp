@@ -6,6 +6,7 @@ import Vehicle from './pages/Vehicle';
 import Ship from './pages/Ship';
 import Photography from './pages/Photography';
 import Dashboard from './pages/Dashboard';
+import PermitDetails from './pages/PermitDetails';
 import LandingPage from './pages/LandingPage/LandingPage';
 import SignInForm from './components/SignInForm';
 import SignUpForm from './components/SignUpForm';
@@ -44,6 +45,9 @@ function App() {
         } />
         <Route path="/dashboard" element={
           <ProtectedRoute><Dashboard /></ProtectedRoute>
+        } />
+        <Route path="/permit/:permitId" element={
+          <ProtectedRoute><PermitDetails /></ProtectedRoute>
         } />
         <Route path="/member-control" element={
           <ProtectedRoute><MemberControlPage /></ProtectedRoute>

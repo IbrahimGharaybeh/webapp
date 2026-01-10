@@ -3,6 +3,15 @@ import { checkCompanies, checkCompaniesAdmin } from '../functions/checkCompanies
 import { makeCompany } from '../functions/makeCompany.js';
 import { inviteMember, removeMember } from '../functions/companyMemberControls.js';
 import { checkAdmin } from '../functions/checkAdmin.js';
+import {
+  getPersonPermitIdsByCompany,
+  getVehiclePermitIdsByCompany,
+  getShipPermitIdsByCompany,
+  getPhotographyPermitIdsByCompany,
+  getPermitRowByType,
+  getPermitIndexById
+} from '../functions/dashboardPermits.js';
+import { getRepresentativeName } from '../functions/representativeLookup.js';
 import { pool } from '../utils/db.js';
 
 const isUuid = (value) => typeof value === 'string' && /^[0-9a-fA-F-]{36}$/.test(value);
@@ -78,6 +87,95 @@ export default function companyRoutes() {
     } catch (err) {
       console.error('companyRepresentatives failed', err);
       res.status(500).json({ error: 'Failed to load representatives', details: err.message });
+    }
+  });
+
+  router.post('/companyPermits', async (req, res) => {
+    try {
+      const adminId = req.body.adminId;
+      const companyId = req.body.companyId;
+      if (!adminId || !companyId) {
+        return res.status(400).json({ error: 'adminId and companyId are required' });
+      }
+      if (![adminId, companyId].every(isUuid)) {
+        return res.status(400).json({ error: 'adminId and companyId must be UUIDs' });
+      }
+
+      const isAdmin = await checkAdmin(adminId, companyId);
+      if (!isAdmin) {
+        return res.status(403).json({ error: 'Authorization denied' });
+      }
+
+      const [personIds, vehicleIds, shipIds, photographyIds] = await Promise.all([
+        getPersonPermitIdsByCompany(companyId),
+        getVehiclePermitIdsByCompany(companyId),
+        getShipPermitIdsByCompany(companyId),
+        getPhotographyPermitIdsByCompany(companyId)
+      ]);
+
+      const permitRefs = [
+        ...personIds.map((row) => ({ permitType: 1, permitId: row.permit_id, isDraft: row.is_draft })),
+        ...vehicleIds.map((row) => ({ permitType: 2, permitId: row.permit_id, isDraft: row.is_draft })),
+        ...shipIds.map((row) => ({ permitType: 3, permitId: row.permit_id, isDraft: row.is_draft })),
+        ...photographyIds.map((row) => ({ permitType: 4, permitId: row.permit_id, isDraft: row.is_draft }))
+      ];
+
+      const permits = await Promise.all(
+        permitRefs.map(async (ref) => ({
+          ...ref,
+          permit: await getPermitRowByType(ref.permitType, ref.permitId)
+        }))
+      );
+
+      const permitsWithRep = await Promise.all(
+        permits.map(async (entry) => {
+          const permitRow = entry.permit;
+          const repId = permitRow?.representative;
+          const repName = repId ? await getRepresentativeName(repId) : null;
+          return { ...entry, repName };
+        })
+      );
+
+      res.json(permitsWithRep);
+    } catch (err) {
+      console.error('companyPermits failed', err);
+      res.status(500).json({ error: 'Failed to load permits', details: err.message });
+    }
+  });
+
+  router.post('/permitById', async (req, res) => {
+    try {
+      const adminId = req.body.adminId;
+      const permitId = Number(req.body.permitId);
+      if (!adminId || !Number.isInteger(permitId)) {
+        return res.status(400).json({ error: 'adminId and permitId are required' });
+      }
+      if (!isUuid(adminId)) {
+        return res.status(400).json({ error: 'adminId must be a UUID' });
+      }
+
+      const permitIndex = await getPermitIndexById(permitId);
+      if (!permitIndex) {
+        return res.status(404).json({ error: 'Permit not found' });
+      }
+
+      const isAdmin = await checkAdmin(adminId, permitIndex.company_id);
+      if (!isAdmin) {
+        return res.status(403).json({ error: 'Authorization denied' });
+      }
+
+      const permit = await getPermitRowByType(permitIndex.permit_type, permitId);
+
+      res.json({
+        permitType: permitIndex.permit_type,
+        permitId: permitIndex.permit_id,
+        companyId: permitIndex.company_id,
+        isDraft: permitIndex.is_draft,
+        permit
+      });
+    } catch (err) {
+      console.error('permitById failed', err);
+      res.status(500).json({ error: 'Failed to load permit', details: err.message });
     }
   });
 

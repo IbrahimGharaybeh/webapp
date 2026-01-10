@@ -27,6 +27,12 @@ interface PermitData {
   company_id: string;
   posted_at: string;
   permit_id: number;
+  rep?: string | null;
+  representative?: string | null;
+  name_arabic?: string | null;
+  nameArabic?: string | null;
+  is_draft?: boolean | null;
+  isDraft?: boolean | null;
 }
 
 interface Company {
@@ -190,6 +196,10 @@ function FormHistory({
     return company ? company.company_name_en : companyId;
   };
 
+  const getRepName = (item: PermitData) => {
+    return item.rep || item.representative || item.user_id || 'Unknown';
+  };
+
   return (
     <div className={className}>
       <h2>Form History</h2>
@@ -265,6 +275,9 @@ function FormHistory({
                     <div>
                       <p>
                         Company: {getCompanyName(item.company_id)}
+                      </p>
+                      <p>
+                        Representative: {getRepName(item)}
                       </p>
                       <p>
                         Posted at: {formatDate(item.posted_at)}

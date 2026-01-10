@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { randomUUID } from 'crypto';
+import { getRepresentativeName } from '../functions/representativeLookup.js';
 
 export default function(pool) {
   const router = Router();
@@ -24,7 +25,7 @@ export default function(pool) {
     }
   });
 
-    router.post('/signup', async (req, res) => {
+  router.post('/signup', async (req, res) => {
         const { id, email, username, name } = req.body;
         console.log('Received ID:', id);  // Add this
         console.log('ID type:', typeof id);  // Add this
@@ -39,6 +40,24 @@ export default function(pool) {
             res.status(500).json({ error: 'Failed to create user' });
         }
         });
+
+  router.post('/representative-name', async (req, res) => {
+    try {
+      const repId = req.body.repId;
+      console.log('[representative-name] request', { repId });
+      if (!repId) {
+        console.log('[representative-name] missing repId');
+        return res.status(400).json({ error: 'repId is required' });
+      }
+
+      const name = await getRepresentativeName(repId);
+      console.log('[representative-name] response', { repId, name });
+      return res.json({ name });
+    } catch (error) {
+      console.error('representative-name failed', error);
+      res.status(500).json({ error: 'Failed to load representative name' });
+    }
+  });
 
   return router;
 }
