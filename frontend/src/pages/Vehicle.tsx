@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import './PermitPage.css';
 import { TableDropDown } from '../components/DropDownComplicated/TableDropDown';
+import SubmitChoiceModal from '../components/SubmitChoiceModal';
+import Form from '../components/Form/Form';
+import Dropdown from '../components/Dropdown/Dropdown';
+import DatePicker from '../components/DatePicker/DatePicker';
+import Input from '../components/Input/Input';
+import Textarea from '../components/Textarea/Textarea';
 
 interface Company {
   company: string;
   name: string;
-}
-
-interface Representative {
-  rep_id: number;
-  rep_name_ar: string;
-  rep_name_en: string;
 }
 
 interface PermittedLocation {
@@ -30,12 +30,15 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
   const { user } = useAuth();
   const [language, setLanguage] = useState<'en' | 'ar'>(initialLanguage);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [representatives, setRepresentatives] = useState<Representative[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
+  const [showSubmitChoice, setShowSubmitChoice] = useState(false);
+  const [isDraftChoice, setIsDraftChoice] = useState<boolean | null>(null);
 
   const [formData, setFormData] = useState({
     companyName: '',
-    representative: '',
+    representative: user?.id ?? '',
     permitType: '',
     transactionType: '',
     // Driver fields
@@ -119,6 +122,7 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
         contractLocationsDesc: 'Contract Locations Desc'
       },
       print: 'Print',
+      autoFillSubmit: 'Auto-fill & Submit',
       clear: 'Clear',
       selectCompany: '-- Select a company --',
       select: '-- Select --',
@@ -168,6 +172,7 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
       },
       print: 'طباعة',
       clear: 'تفريغ الحقول',
+      autoFillSubmit: 'Auto-fill & Submit',
       selectCompany: '-- اختر شركة --',
       select: '-- اختر --',
       switchLanguage: 'English'
@@ -218,30 +223,9 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
     fetchCompanies();
   }, [user]);
 
-  // Fetch representatives when company is selected
   useEffect(() => {
-    const fetchRepresentatives = async () => {
-      if (!formData.companyName) {
-        setRepresentatives([]);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        // TODO: Replace with actual API endpoint
-        const response = await fetch(`/api/representatives?companyId=${formData.companyName}`);
-        const data = await response.json();
-        setRepresentatives(data);
-      } catch (error) {
-        console.error('Error fetching representatives:', error);
-        setRepresentatives([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRepresentatives();
-  }, [formData.companyName]);
+    setFormData(prev => ({ ...prev, representative: user?.id ?? '' }));
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -257,7 +241,7 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
   const handleClear = () => {
     setFormData({
       companyName: '',
-      representative: '',
+      representative: user?.id ?? '',
       permitType: '',
       transactionType: '',
       unifiedNo: '',
@@ -294,35 +278,107 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
         contractLocationsDesc: ''
       }))
     });
+    setSubmitSuccess(false);
+    setSubmitError(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
+  const submitPayload = async (payload: typeof formData, draftChoice: boolean | null) => {
+    if (draftChoice === null) return;
     try {
       setLoading(true);
-      
-      // TODO: Replace with actual API endpoint
-      const response = await fetch('/api/permits/vehicle', {
+      setSubmitSuccess(false);
+      setSubmitError(false);
+      console.log('Submitting vehicle form payload:', payload);
+      const response = await fetch(`${API_URL}/api/data/vehicle`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        credentials: 'include',
+        body: JSON.stringify({
+          ...payload,
+          companyId: payload.companyName,
+          isDraft: draftChoice
+        }),
       });
 
       if (!response.ok) {
         throw new Error('Submission failed');
       }
 
-      const result = await response.json();
-      console.log('Form submitted successfully:', result);
-      
+      if (!draftChoice) {
+        const pdfBlob = await response.blob();
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+      }
+      setSubmitSuccess(true);
     } catch (error) {
       console.error('Error submitting form:', error);
+      setSubmitError(true);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsDraftChoice(null);
+    setShowSubmitChoice(true);
+  };
+
+  const handleAutoFillSubmit = () => {
+    if (!companies.length) return;
+
+    const randomDigits = (length: number) =>
+      Array.from({ length }, () => Math.floor(Math.random() * 10)).join('');
+    const formatDate = (date: Date) => date.toISOString().slice(0, 10);
+    const now = new Date();
+    const dobDate = new Date(now);
+    dobDate.setFullYear(now.getFullYear() - 30);
+    const expiryDate = new Date(now);
+    expiryDate.setFullYear(now.getFullYear() + 1);
+
+    setFormData(prev => ({
+      ...prev,
+      companyName: companies[0]?.company ?? '',
+      permitType: String(vehiclePermitTypes[0]?.code ?? ''),
+      transactionType: String(transactionTypes[0]?.code ?? ''),
+      unifiedNo: randomDigits(9),
+      nameArabic: 'Test User',
+      nationality: '101',
+      religionDen: '1',
+      passportNo: randomDigits(9),
+      fullResidenceNo: randomDigits(10),
+      occupation: '1',
+      personPrmNo: randomDigits(8),
+      mobileNo: randomDigits(10),
+      dob: formatDate(dobDate),
+      expiryDate1: formatDate(expiryDate),
+      expiryDate2: formatDate(expiryDate),
+      vehiclePrmNo: randomDigits(8),
+      vehicleNumber: randomDigits(6),
+      plateKind1: '1',
+      nationalityVehicle: '101',
+      ownerName: 'Owner',
+      vehicleCategory: '1',
+      engineNo: randomDigits(8),
+      corresNo: randomDigits(6),
+      placeOfIssue: '1',
+      plateKind2: '1',
+      vehicleType: '1',
+      vehicleColor: 'Blue',
+      chassisNumber: randomDigits(12),
+      registExpiry: formatDate(expiryDate),
+      corresExpiry: formatDate(expiryDate),
+      remarks: 'Auto-filled',
+      permittedLocations: Array.from({ length: 6 }, (_, index) => ({
+        contractNo: randomDigits(6),
+        contractLocationsNo: randomDigits(4),
+        contractLocationsDesc: `Location ${index + 1}`
+      }))
+    }));
+    setIsDraftChoice(null);
+    setShowSubmitChoice(true);
   };
 
   const handlePrint = () => {
@@ -344,67 +400,54 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
         </div>
 
       <div className="permit-card">
-      <form onSubmit={handleSubmit}>
+      <Form onSubmit={handleSubmit}>
+        {submitSuccess && (
+          <div style={{ padding: '1rem', backgroundColor: '#d4edda', color: '#155724', marginBottom: '1rem', borderRadius: '4px' }}>
+            {l.submitSuccess ?? 'Form submitted successfully!'}
+          </div>
+        )}
+        {submitError && (
+          <div style={{ padding: '1rem', backgroundColor: '#f8d7da', color: '#721c24', marginBottom: '1rem', borderRadius: '4px' }}>
+            {l.submitError ?? 'Error submitting form. Please try again.'}
+          </div>
+        )}
 
         <fieldset>
           <legend>{l.companyPermitInfo}</legend>
           <div>
             <label>{l.companyName}</label>
-            <select
+            <Dropdown
               name="companyName"
               value={formData.companyName}
               onChange={handleChange}
-              disabled={loading}
-            >
-              <option value="">{l.selectCompany}</option>
-              {companies.map((company) => (
-                <option key={company.company} value={company.company}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
-
-            <label>{l.representative}</label>
-            <select
-              name="representative"
-              value={formData.representative}
-              onChange={handleChange}
-            >
-              <option value="">{l.select}</option>
-              {representatives.map((rep) => (
-                <option key={rep.rep_id} value={rep.rep_id}>
-                  {language === 'ar' ? rep.rep_name_ar : rep.rep_name_en}
-                </option>
-              ))}
-            </select>
+              options={companies.map(company => ({
+                code: company.company,
+                en: company.name,
+                ar: company.name
+              }))}
+              language={language}
+              placeholder={l.selectCompany}
+            />
 
             <label>{l.permitType}</label>
-            <select
+            <Dropdown
               name="permitType"
               value={formData.permitType}
               onChange={handleChange}
-            >
-              <option value="">{l.select}</option>
-              {vehiclePermitTypes.map((type) => (
-                <option key={type.code} value={type.code}>
-                  {language === 'ar' ? type.ar : type.en}
-                </option>
-              ))}
-            </select>
+              options={vehiclePermitTypes}
+              language={language}
+              placeholder={l.select}
+            />
 
             <label>{l.transactionType}</label>
-            <select
+            <Dropdown
               name="transactionType"
               value={formData.transactionType}
               onChange={handleChange}
-            >
-              <option value="">{l.select}</option>
-              {transactionTypes.map((type) => (
-                <option key={type.code} value={type.code}>
-                  {language === 'ar' ? type.ar : type.en}
-                </option>
-              ))}
-            </select>
+              options={transactionTypes}
+              language={language}
+              placeholder={l.select}
+            />
           </div>
         </fieldset>
 
@@ -413,14 +456,14 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
             <legend>{l.driverDetails}</legend>
             <div>
               <label>{l.unifiedNo}</label>
-              <input
+              <Input
                 name="unifiedNo"
                 value={formData.unifiedNo}
                 onChange={handleChange}
               />
 
               <label>{l.nameArabic}</label>
-              <input
+              <Input
                 name="nameArabic"
                 value={formData.nameArabic}
                 onChange={handleChange}
@@ -430,23 +473,29 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
               <TableDropDown 
                 csvPath='/csv/CNIA_NATS.txt'
                 columns={2}
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, nationality: code }))
+                }
               />
 
               <label>{l.religionDen}</label>
               <TableDropDown 
                 csvPath='/csv/CNIA.RELIGION.txt'
                 columns={2}
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, religionDen: code }))
+                }
               />
 
               <label>{l.passportNo}</label>
-              <input
+              <Input
                 name="passportNo"
                 value={formData.passportNo}
                 onChange={handleChange}
               />
 
               <label>{l.fullResidenceNo}</label>
-              <input
+              <Input
                 name="fullResidenceNo"
                 value={formData.fullResidenceNo}
                 onChange={handleChange}
@@ -456,41 +505,41 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
               <TableDropDown 
                 csvPath='/csv/CNIA_JOBS.txt'
                 columns={2}
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, occupation: code }))
+                }
               />
 
               <label>{l.personPrmNo}</label>
-              <input
+              <Input
                 name="personPrmNo"
                 value={formData.personPrmNo}
                 onChange={handleChange}
               />
 
               <label>{l.mobileNo}</label>
-              <input
+              <Input
                 name="mobileNo"
                 value={formData.mobileNo}
                 onChange={handleChange}
               />
 
               <label>{l.dob}</label>
-              <input
-                type="date"
+              <DatePicker
                 name="dob"
                 value={formData.dob}
                 onChange={handleChange}
               />
 
               <label>{l.expiryDate1}</label>
-              <input
-                type="date"
+              <DatePicker
                 name="expiryDate1"
                 value={formData.expiryDate1}
                 onChange={handleChange}
               />
 
               <label>{l.expiryDate2}</label>
-              <input
-                type="date"
+              <DatePicker
                 name="expiryDate2"
                 value={formData.expiryDate2}
                 onChange={handleChange}
@@ -502,14 +551,14 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
             <legend>{l.vehicleDetails}</legend>
             <div>
               <label>{l.vehiclePrmNo}</label>
-              <input
+              <Input
                 name="vehiclePrmNo"
                 value={formData.vehiclePrmNo}
                 onChange={handleChange}
               />
 
               <label>{l.vehicleNumber}</label>
-              <input
+              <Input
                 name="vehicleNumber"
                 value={formData.vehicleNumber}
                 onChange={handleChange}
@@ -519,37 +568,43 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
               <TableDropDown 
                 csvPath='/csv/CNIA_JOBS.txt'
                 columns={2}
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, plateKind1: code }))
+                }
               />
 
               <label>{l.nationalityVehicle}</label>
               <TableDropDown 
                 csvPath='/csv/CNIA_NATS.txt'
                 columns={2}
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, nationalityVehicle: code }))
+                }
               />
 
               <label>{l.ownerName}</label>
-              <input
+              <Input
                 name="ownerName"
                 value={formData.ownerName}
                 onChange={handleChange}
               />
 
               <label>{l.vehicleCategory}</label>
-              <input
+              <Input
                 name="vehicleCategory"
                 value={formData.vehicleCategory}
                 onChange={handleChange}
               />
 
               <label>{l.engineNo}</label>
-              <input
+              <Input
                 name="engineNo"
                 value={formData.engineNo}
                 onChange={handleChange}
               />
 
               <label>{l.corresNo}</label>
-              <input
+              <Input
                 name="corresNo"
                 value={formData.corresNo}
                 onChange={handleChange}
@@ -559,46 +614,50 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
               <TableDropDown 
                 csvPath='/csv/vehicleplaceofissue.txt'
                 columns={2}
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, placeOfIssue: code }))
+                }
               />
 
               <label>{l.plateKind}</label>
               <TableDropDown 
                 csvPath='/csv/platecolour.txt'
                 columns={2}
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, plateKind2: code }))
+                }
               />
 
               <label>{l.vehicleType}</label>
-              <input
+              <Input
                 name="vehicleType"
                 value={formData.vehicleType}
                 onChange={handleChange}
               />
 
               <label>{l.vehicleColor}</label>
-              <input
+              <Input
                 name="vehicleColor"
                 value={formData.vehicleColor}
                 onChange={handleChange}
               />
 
               <label>{l.chassisNumber}</label>
-              <input
+              <Input
                 name="chassisNumber"
                 value={formData.chassisNumber}
                 onChange={handleChange}
               />
 
               <label>{l.registExpiry}</label>
-              <input
-                type="date"
+              <DatePicker
                 name="registExpiry"
                 value={formData.registExpiry}
                 onChange={handleChange}
               />
 
               <label>{l.corresExpiry}</label>
-              <input
-                type="date"
+              <DatePicker
                 name="corresExpiry"
                 value={formData.corresExpiry}
                 onChange={handleChange}
@@ -609,7 +668,7 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
 
         <div>
           <label>{l.remarks}</label>
-          <input
+          <Textarea
             name="remarks"
             value={formData.remarks}
             onChange={handleChange}
@@ -625,15 +684,15 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
           </div>
           {formData.permittedLocations.map((location, index) => (
             <div key={index}>
-              <input
+              <Input
                 value={location.contractNo}
                 onChange={(e) => handleLocationChange(index, 'contractNo', e.target.value)}
               />
-              <input
+              <Input
                 value={location.contractLocationsNo}
                 onChange={(e) => handleLocationChange(index, 'contractLocationsNo', e.target.value)}
               />
-              <input
+              <Input
                 value={location.contractLocationsDesc}
                 onChange={(e) => handleLocationChange(index, 'contractLocationsDesc', e.target.value)}
               />
@@ -645,11 +704,26 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
           <button type="submit" disabled={loading}>
             {loading ? 'Loading...' : l.print}
           </button>
+          <button type="button" onClick={handleAutoFillSubmit} disabled={loading || !companies.length}>
+            {l.autoFillSubmit}
+          </button>
           <button type="button" onClick={handleClear}>
             {l.clear}
           </button>
         </div>
-      </form>
+      </Form>
+      <SubmitChoiceModal
+        open={showSubmitChoice}
+        onCancel={() => {
+          setShowSubmitChoice(false);
+          setIsDraftChoice(null);
+        }}
+        onChoose={async (draftChoice) => {
+          setIsDraftChoice(draftChoice);
+          setShowSubmitChoice(false);
+          await submitPayload(formData, draftChoice);
+        }}
+      />
       </div>
     </div>
     </main>
@@ -657,4 +731,9 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
 }
 
 export default Vehicle;
+
+
+
+
+
 

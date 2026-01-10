@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import './PermitPage.css';
 import { TableDropDown } from '../components/DropDownComplicated/TableDropDown';
+import SubmitChoiceModal from '../components/SubmitChoiceModal';
+import Form from '../components/Form/Form';
+import Dropdown from '../components/Dropdown/Dropdown';
+import DatePicker from '../components/DatePicker/DatePicker';
+import Input from '../components/Input/Input';
+import Textarea from '../components/Textarea/Textarea';
 
 interface Company {
   company: string;
   name: string;
-}
-
-interface Representative {
-  rep_id: number;
-  rep_name_ar: string;
-  rep_name_en: string;
 }
 
 interface Camera {
@@ -35,12 +35,15 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
   const { user } = useAuth();
   const [language, setLanguage] = useState<'en' | 'ar'>(initialLanguage);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [representatives, setRepresentatives] = useState<Representative[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
+  const [showSubmitChoice, setShowSubmitChoice] = useState(false);
+  const [isDraftChoice, setIsDraftChoice] = useState<boolean | null>(null);
 
   const [formData, setFormData] = useState({
     companyName: '',
-    representative: '',
+    representative: user?.id ?? '',
     permitType: '',
     transactionType: '',
     unifiedNo: '',
@@ -57,9 +60,9 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
     expiryDate1: '',
     expiryDate2: '',
     remarks: '',
-    cameras: Array.from({ length: 6 }, () => ({ 
-      cameraNo: '', 
-      cameraBrand: '' 
+    cameras: Array.from({ length: 6 }, () => ({
+      cameraNo: '',
+      cameraBrand: ''
     })),
     permittedLocations: Array.from({ length: 6 }, () => ({
       contractNo: '',
@@ -101,56 +104,65 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
         contractLocationsDesc: 'Contract Locations Desc'
       },
       print: 'Print',
+      autoFillSubmit: 'Auto-fill & Submit',
       clear: 'Clear',
       selectCompany: '-- Select a company --',
       select: '-- Select --',
-      switchLanguage: 'عربي'
+      switchLanguage: '????'
     },
     ar: {
-      formTitle: 'نموذج طلب تصريح التصوير',
-      companyPermitInfo: 'بيانات الشركة و التصريح',
-      applicantDetails: 'بيانات طلب التصريح',
-      cameraEquipment: 'معدات التصوير',
-      permittedLocationsTitle: 'المناطق المصرح بها',
-      companyName: 'اسم الشركة',
-      representative: 'الممثل',
-      permitType: 'نوع التصريح',
-      transactionType: 'نوع المعاملة',
-      unifiedNo: 'الرقم الموحد',
-      nameArabic: 'الاسم بالعربية',
-      nationality: 'الجنسية',
-      religionDen: 'الديانة/الطائفة',
-      passportNo: 'رقم الجواز',
-      fullResidenceNo: 'رقم الإقامة الكامل',
-      occupation: 'المهنة',
-      emiratesIdNo: 'رقم الهوية الإماراتية',
-      mobileNo: 'رقم الجوال',
-      permissionNo: 'رقم الإذن',
-      dob: 'تاريخ الميلاد',
-      expiryDate1: 'تاريخ الانتهاء',
-      expiryDate2: 'تاريخ الانتهاء',
-      remarks: 'ملاحظات',
-      cameraNo: 'رقم الكاميرا',
-      cameraBrand: 'ماركة الكاميرا',
+      formTitle: '????? ??? ????? ???????',
+      companyPermitInfo: '?????? ?????? ? ???????',
+      applicantDetails: '?????? ??? ???????',
+      cameraEquipment: '????? ???????',
+      permittedLocationsTitle: '??????? ?????? ???',
+      companyName: '??? ??????',
+      representative: '??????',
+      permitType: '??? ???????',
+      transactionType: '??? ????????',
+      unifiedNo: '????? ??????',
+      nameArabic: '????? ????????',
+      nationality: '???????',
+      religionDen: '???????/???????',
+      passportNo: '??? ??????',
+      fullResidenceNo: '??? ??????? ??????',
+      occupation: '??????',
+      emiratesIdNo: '??? ?????? ??????????',
+      mobileNo: '??? ??????',
+      permissionNo: '??? ?????',
+      dob: '????? ???????',
+      expiryDate1: '????? ????????',
+      expiryDate2: '????? ????????',
+      remarks: '???????',
+      cameraNo: '??? ????????',
+      cameraBrand: '????? ????????',
       permittedLocations: {
-        contractNo: 'رقم العقد',
-        contractLocationsNo: 'رقم مواقع العقد',
-        contractLocationsDesc: 'وصف مواقع العقد'
+        contractNo: '??? ?????',
+        contractLocationsNo: '??? ????? ?????',
+        contractLocationsDesc: '??? ????? ?????'
       },
-      print: 'طباعة',
-      clear: 'تفريغ الحقول',
-      selectCompany: '-- اختر شركة --',
-      select: '-- اختر --',
+      print: '?????',
+      clear: '????? ??????',
+      autoFillSubmit: 'Auto-fill & Submit',
+      selectCompany: '-- ???? ???? --',
+      select: '-- ???? --',
       switchLanguage: 'English'
     }
   };
 
   const transactionTypes = [
-    { code: 1, en: 'New', ar: 'إصدار' },
-    { code: 2, en: 'Renew', ar: 'تجديد' },
-    { code: 3, en: 'Cancel', ar: 'إلغاء' },
-    { code: 4, en: 'Missing', ar: 'بدل فاقد' },
-    { code: 5, en: 'Damaged', ar: 'بدل تالف' }
+    { code: 1, en: 'New', ar: '?????' },
+    { code: 2, en: 'Renew', ar: '?????' },
+    { code: 3, en: 'Cancel', ar: '?????' },
+    { code: 4, en: 'Missing', ar: '??? ????' },
+    { code: 5, en: 'Damaged', ar: '??? ????' }
+  ];
+
+  const permitTypes = [
+    { code: 1, en: 'Onshore', ar: '??? ???' },
+    { code: 2, en: 'Offshore', ar: '??? ???' },
+    { code: 3, en: 'Temporary - 1 month', ar: '???? - ???' },
+    { code: 4, en: 'Representative', ar: '?????' }
   ];
 
   const l = labels[language];
@@ -184,30 +196,9 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
     fetchCompanies();
   }, [user]);
 
-  // Fetch representatives when company is selected
   useEffect(() => {
-    const fetchRepresentatives = async () => {
-      if (!formData.companyName) {
-        setRepresentatives([]);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        // TODO: Replace with actual API endpoint
-        const response = await fetch(`/api/representatives?companyId=${formData.companyName}`);
-        const data = await response.json();
-        setRepresentatives(data);
-      } catch (error) {
-        console.error('Error fetching representatives:', error);
-        setRepresentatives([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRepresentatives();
-  }, [formData.companyName]);
+    setFormData(prev => ({ ...prev, representative: user?.id ?? '' }));
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -229,7 +220,7 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
   const handleClear = () => {
     setFormData({
       companyName: '',
-      representative: '',
+      representative: user?.id ?? '',
       permitType: '',
       transactionType: '',
       unifiedNo: '',
@@ -246,9 +237,9 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
       expiryDate1: '',
       expiryDate2: '',
       remarks: '',
-      cameras: Array.from({ length: 6 }, () => ({ 
-        cameraNo: '', 
-        cameraBrand: '' 
+      cameras: Array.from({ length: 6 }, () => ({
+        cameraNo: '',
+        cameraBrand: ''
       })),
       permittedLocations: Array.from({ length: 6 }, () => ({
         contractNo: '',
@@ -256,35 +247,97 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
         contractLocationsDesc: ''
       }))
     });
+    setSubmitSuccess(false);
+    setSubmitError(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
+  const submitPayload = async (payload: typeof formData, draftChoice: boolean | null) => {
+    if (draftChoice === null) return;
     try {
       setLoading(true);
-      
-      // TODO: Replace with actual API endpoint
-      const response = await fetch('/api/permits/photography', {
+      setSubmitSuccess(false);
+      setSubmitError(false);
+      console.log('Submitting photography form payload:', payload);
+      const response = await fetch(`${API_URL}/api/data/photography`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        credentials: 'include',
+        body: JSON.stringify({
+          ...payload,
+          companyId: payload.companyName,
+          isDraft: draftChoice
+        }),
       });
 
       if (!response.ok) {
         throw new Error('Submission failed');
       }
 
-      const result = await response.json();
-      console.log('Form submitted successfully:', result);
-      
+      if (!draftChoice) {
+        const pdfBlob = await response.blob();
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+      }
+      setSubmitSuccess(true);
     } catch (error) {
       console.error('Error submitting form:', error);
+      setSubmitError(true);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsDraftChoice(null);
+    setShowSubmitChoice(true);
+  };
+
+  const handleAutoFillSubmit = () => {
+    if (!companies.length) return;
+
+    const randomDigits = (length: number) =>
+      Array.from({ length }, () => Math.floor(Math.random() * 10)).join('');
+    const formatDate = (date: Date) => date.toISOString().slice(0, 10);
+    const now = new Date();
+    const dobDate = new Date(now);
+    dobDate.setFullYear(now.getFullYear() - 30);
+    const expiryDate = new Date(now);
+    expiryDate.setFullYear(now.getFullYear() + 1);
+
+    setFormData(prev => ({
+      ...prev,
+      companyName: companies[0]?.company ?? '',
+      permitType: String(permitTypes[0]?.code ?? ''),
+      transactionType: String(transactionTypes[0]?.code ?? ''),
+      unifiedNo: randomDigits(9),
+      nameArabic: 'Test User',
+      nationality: '101',
+      religionDen: '1',
+      passportNo: randomDigits(9),
+      fullResidenceNo: randomDigits(10),
+      occupation: '1',
+      emiratesIdNo: randomDigits(15),
+      mobileNo: randomDigits(10),
+      permissionNo: randomDigits(8),
+      dob: formatDate(dobDate),
+      expiryDate1: formatDate(expiryDate),
+      expiryDate2: formatDate(expiryDate),
+      remarks: 'Auto-filled',
+      cameras: Array.from({ length: 6 }, (_, index) => ({
+        cameraNo: randomDigits(6),
+        cameraBrand: `Brand ${index + 1}`
+      })),
+      permittedLocations: Array.from({ length: 6 }, (_, index) => ({
+        contractNo: randomDigits(6),
+        contractLocationsNo: randomDigits(4),
+        contractLocationsDesc: `Location ${index + 1}`
+      }))
+    }));
+    setIsDraftChoice(null);
+    setShowSubmitChoice(true);
   };
 
   const handlePrint = () => {
@@ -306,62 +359,54 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
         </div>
 
       <div className="permit-card">
-      <form onSubmit={handleSubmit}>
+      <Form onSubmit={handleSubmit}>
+        {submitSuccess && (
+          <div style={{ padding: '1rem', backgroundColor: '#d4edda', color: '#155724', marginBottom: '1rem', borderRadius: '4px' }}>
+            {l.submitSuccess ?? 'Form submitted successfully!'}
+          </div>
+        )}
+        {submitError && (
+          <div style={{ padding: '1rem', backgroundColor: '#f8d7da', color: '#721c24', marginBottom: '1rem', borderRadius: '4px' }}>
+            {l.submitError ?? 'Error submitting form. Please try again.'}
+          </div>
+        )}
 
         <fieldset>
           <legend>{l.companyPermitInfo}</legend>
           <div>
             <label>{l.companyName}</label>
-            <select
+            <Dropdown
               name="companyName"
               value={formData.companyName}
               onChange={handleChange}
-              disabled={loading}
-            >
-              <option value="">{l.selectCompany}</option>
-              {companies.map((company) => (
-                <option key={company.company} value={company.company}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
-
-            <label>{l.representative}</label>
-            <select
-              name="representative"
-              value={formData.representative}
-              onChange={handleChange}
-            >
-              <option value="">{l.select}</option>
-              {representatives.map((rep) => (
-                <option key={rep.rep_id} value={rep.rep_id}>
-                  {language === 'ar' ? rep.rep_name_ar : rep.rep_name_en}
-                </option>
-              ))}
-            </select>
+              options={companies.map(company => ({
+                code: company.company,
+                en: company.name,
+                ar: company.name
+              }))}
+              language={language}
+              placeholder={l.selectCompany}
+            />
 
             <label>{l.permitType}</label>
-            <select
+            <Dropdown
               name="permitType"
               value={formData.permitType}
               onChange={handleChange}
-            >
-              <option value="">{l.select}</option>
-            </select>
+              options={permitTypes}
+              language={language}
+              placeholder={l.select}
+            />
 
             <label>{l.transactionType}</label>
-            <select
+            <Dropdown
               name="transactionType"
               value={formData.transactionType}
               onChange={handleChange}
-            >
-              <option value="">{l.select}</option>
-              {transactionTypes.map((type) => (
-                <option key={type.code} value={type.code}>
-                  {language === 'ar' ? type.ar : type.en}
-                </option>
-              ))}
-            </select>
+              options={transactionTypes}
+              language={language}
+              placeholder={l.select}
+            />
           </div>
         </fieldset>
 
@@ -369,91 +414,97 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
           <legend>{l.applicantDetails}</legend>
           <div>
             <label>{l.unifiedNo}</label>
-            <input
+            <Input
               name="unifiedNo"
               value={formData.unifiedNo}
               onChange={handleChange}
             />
 
             <label>{l.nameArabic}</label>
-            <input
+            <Input
               name="nameArabic"
               value={formData.nameArabic}
               onChange={handleChange}
             />
 
             <label>{l.nationality}</label>
-            <TableDropDown 
+            <TableDropDown
               csvPath='/csv/CNIA_NATS.txt'
               columns={2}
+              onSelect={(code) =>
+                setFormData(prev => ({ ...prev, nationality: code }))
+              }
             />
 
             <label>{l.religionDen}</label>
-            <TableDropDown 
+            <TableDropDown
               csvPath='/csv/CNIA.RELIGION.txt'
               columns={2}
+              onSelect={(code) =>
+                setFormData(prev => ({ ...prev, religionDen: code }))
+              }
             />
 
             <label>{l.passportNo}</label>
-            <input
+            <Input
               name="passportNo"
               value={formData.passportNo}
               onChange={handleChange}
             />
 
             <label>{l.fullResidenceNo}</label>
-            <input
+            <Input
               name="fullResidenceNo"
               value={formData.fullResidenceNo}
               onChange={handleChange}
             />
 
             <label>{l.occupation}</label>
-            <TableDropDown 
+            <TableDropDown
               csvPath='/csv/CNIA_JOBS.txt'
               columns={2}
+              onSelect={(code) =>
+                setFormData(prev => ({ ...prev, occupation: code }))
+              }
             />
 
             <label>{l.emiratesIdNo}</label>
-            <input
+            <Input
               name="emiratesIdNo"
               value={formData.emiratesIdNo}
               onChange={handleChange}
             />
 
             <label>{l.mobileNo}</label>
-            <input
+            <Input
               name="mobileNo"
               value={formData.mobileNo}
               onChange={handleChange}
             />
 
             <label>{l.permissionNo}</label>
-            <input
+            <Input
               name="permissionNo"
               value={formData.permissionNo}
               onChange={handleChange}
             />
 
             <label>{l.dob}</label>
-            <input
-              type="date"
+            <DatePicker
               name="dob"
               value={formData.dob}
               onChange={handleChange}
             />
 
             <label>{l.expiryDate1}</label>
-            <input
-              type="date"
+            <DatePicker
               name="expiryDate1"
               value={formData.expiryDate1}
               onChange={handleChange}
             />
 
             <label>{l.expiryDate2}</label>
-            <input
-              type="date"
+            <DatePicker
               name="expiryDate2"
               value={formData.expiryDate2}
               onChange={handleChange}
@@ -469,11 +520,11 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
           </div>
           {formData.cameras.map((camera, index) => (
             <div key={index}>
-              <input
+              <Input
                 value={camera.cameraNo}
                 onChange={(e) => handleCameraChange(index, 'cameraNo', e.target.value)}
               />
-              <input
+              <Input
                 value={camera.cameraBrand}
                 onChange={(e) => handleCameraChange(index, 'cameraBrand', e.target.value)}
               />
@@ -483,7 +534,7 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
 
         <div>
           <label>{l.remarks}</label>
-          <input
+          <Textarea
             name="remarks"
             value={formData.remarks}
             onChange={handleChange}
@@ -499,15 +550,15 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
           </div>
           {formData.permittedLocations.map((location, index) => (
             <div key={index}>
-              <input
+              <Input
                 value={location.contractNo}
                 onChange={(e) => handleLocationChange(index, 'contractNo', e.target.value)}
               />
-              <input
+              <Input
                 value={location.contractLocationsNo}
                 onChange={(e) => handleLocationChange(index, 'contractLocationsNo', e.target.value)}
               />
-              <input
+              <Input
                 value={location.contractLocationsDesc}
                 onChange={(e) => handleLocationChange(index, 'contractLocationsDesc', e.target.value)}
               />
@@ -519,11 +570,26 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
           <button type="submit" disabled={loading}>
             {loading ? 'Loading...' : l.print}
           </button>
+          <button type="button" onClick={handleAutoFillSubmit} disabled={loading || !companies.length}>
+            {l.autoFillSubmit}
+          </button>
           <button type="button" onClick={handleClear}>
             {l.clear}
           </button>
         </div>
-      </form>
+      </Form>
+      <SubmitChoiceModal
+        open={showSubmitChoice}
+        onCancel={() => {
+          setShowSubmitChoice(false);
+          setIsDraftChoice(null);
+        }}
+        onChoose={async (draftChoice) => {
+          setIsDraftChoice(draftChoice);
+          setShowSubmitChoice(false);
+          await submitPayload(formData, draftChoice);
+        }}
+      />
       </div>
     </div>
     </main>
@@ -531,4 +597,3 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
 }
 
 export default Photography;
-

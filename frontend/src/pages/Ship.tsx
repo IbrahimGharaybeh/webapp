@@ -1,16 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import './PermitPage.css';
+import SubmitChoiceModal from '../components/SubmitChoiceModal';
+import Form from '../components/Form/Form';
+import Dropdown from '../components/Dropdown/Dropdown';
+import DatePicker from '../components/DatePicker/DatePicker';
+import Input from '../components/Input/Input';
+import Textarea from '../components/Textarea/Textarea';
+import { TableDropDown } from '../components/DropDownComplicated/TableDropDown';
+import {
+  ShipLocationsDropDown,
+  ShipPortsDropDown,
+  ShipTypesDropDown
+} from '../components/DropDownComplicated/ShipDropDowns';
 
 interface Company {
   company: string;
   name: string;
-}
-
-interface Representative {
-  rep_id: number;
-  rep_name_ar: string;
-  rep_name_en: string;
 }
 
 interface CrewMember {
@@ -34,12 +40,15 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
   const { user } = useAuth();
   const [language, setLanguage] = useState<'en' | 'ar'>(initialLanguage);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [representatives, setRepresentatives] = useState<Representative[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
+  const [showSubmitChoice, setShowSubmitChoice] = useState(false);
+  const [isDraftChoice, setIsDraftChoice] = useState<boolean | null>(null);
 
   const [formData, setFormData] = useState({
     companyName: '',
-    representative: '',
+    representative: user?.id ?? '',
     permitType: '',
     transactionType: '',
     shipPrmNo: '',
@@ -100,6 +109,7 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
         contractLocationsDesc: 'Contract Locations Desc'
       },
       print: 'Print',
+      autoFillSubmit: 'Auto-fill & Submit',
       clear: 'Clear',
       selectCompany: '-- Select a company --',
       select: '-- Select --',
@@ -138,6 +148,7 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
       },
       print: 'طباعة',
       clear: 'تفريغ الحقول',
+      autoFillSubmit: 'Auto-fill & Submit',
       selectCompany: '-- اختر شركة --',
       select: '-- اختر --',
       switchLanguage: 'English'
@@ -182,32 +193,9 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
 
     fetchCompanies();
   }, [user]);
-
-  // Fetch representatives when company is selected
   useEffect(() => {
-    const fetchRepresentatives = async () => {
-      if (!formData.companyName) {
-        setRepresentatives([]);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        // TODO: Replace with actual API endpoint
-        const response = await fetch(`/api/representatives?companyId=${formData.companyName}`);
-        const data = await response.json();
-        setRepresentatives(data);
-      } catch (error) {
-        console.error('Error fetching representatives:', error);
-        setRepresentatives([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRepresentatives();
-  }, [formData.companyName]);
-
+    setFormData(prev => ({ ...prev, representative: user?.id ?? '' }));
+  }, [user]);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -228,7 +216,7 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
   const handleClear = () => {
     setFormData({
       companyName: '',
-      representative: '',
+      representative: user?.id ?? '',
       permitType: '',
       transactionType: '',
       shipPrmNo: '',
@@ -255,35 +243,95 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
         contractLocationsDesc: ''
       }))
     });
+    setSubmitSuccess(false);
+    setSubmitError(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
+  const submitPayload = async (payload: typeof formData, draftChoice: boolean | null) => {
+    if (draftChoice === null) return;
     try {
       setLoading(true);
-      
-      // TODO: Replace with actual API endpoint
-      const response = await fetch('/api/permits/ship', {
+      setSubmitSuccess(false);
+      setSubmitError(false);
+      console.log('Submitting ship form payload:', payload);
+      const response = await fetch(`${API_URL}/api/data/ship`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        credentials: 'include',
+        body: JSON.stringify({
+          ...payload,
+          companyId: payload.companyName,
+          isDraft: draftChoice
+        }),
       });
 
       if (!response.ok) {
         throw new Error('Submission failed');
       }
 
-      const result = await response.json();
-      console.log('Form submitted successfully:', result);
-      
+      if (!draftChoice) {
+        const pdfBlob = await response.blob();
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+      }
+      setSubmitSuccess(true);
     } catch (error) {
       console.error('Error submitting form:', error);
+      setSubmitError(true);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsDraftChoice(null);
+    setShowSubmitChoice(true);
+  };
+
+  const handleAutoFillSubmit = () => {
+    if (!companies.length) return;
+
+    const randomDigits = (length: number) =>
+      Array.from({ length }, () => Math.floor(Math.random() * 10)).join('');
+    const formatDate = (date: Date) => date.toISOString().slice(0, 10);
+    const now = new Date();
+    const expiryDate = new Date(now);
+    expiryDate.setFullYear(now.getFullYear() + 1);
+
+    setFormData(prev => ({
+      ...prev,
+      companyName: companies[0]?.company ?? '',
+      permitType: '1',
+      transactionType: String(transactionTypes[0]?.code ?? ''),
+      shipPrmNo: randomDigits(8),
+      shipNumber: randomDigits(6),
+      shipName: 'Test Ship',
+      crewCount: '10',
+      totalWeight: randomDigits(5),
+      callSignChannel: randomDigits(4),
+      navigLicValidity: formatDate(expiryDate),
+      shipsOwner: 'Owner',
+      shipsCategory: '1',
+      shipsNationality: '101',
+      registrationPort: '1',
+      permanentHarbor: '1',
+      assignedActivity: 'Activity',
+      remarks: 'Auto-filled',
+      crew: Array.from({ length: 10 }, (_, index) => ({
+        permissionNo: randomDigits(6),
+        name: `Crew ${index + 1}`
+      })),
+      permittedLocations: Array.from({ length: 6 }, (_, index) => ({
+        contractNo: randomDigits(6),
+        contractLocationsNo: randomDigits(4),
+        contractLocationsDesc: `Location ${index + 1}`
+      }))
+    }));
+    setIsDraftChoice(null);
+    setShowSubmitChoice(true);
   };
 
   const handlePrint = () => {
@@ -305,62 +353,54 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
         </div>
 
       <div className="permit-card">
-      <form onSubmit={handleSubmit}>
+      <Form onSubmit={handleSubmit}>
+        {submitSuccess && (
+          <div style={{ padding: '1rem', backgroundColor: '#d4edda', color: '#155724', marginBottom: '1rem', borderRadius: '4px' }}>
+            {l.submitSuccess ?? 'Form submitted successfully!'}
+          </div>
+        )}
+        {submitError && (
+          <div style={{ padding: '1rem', backgroundColor: '#f8d7da', color: '#721c24', marginBottom: '1rem', borderRadius: '4px' }}>
+            {l.submitError ?? 'Error submitting form. Please try again.'}
+          </div>
+        )}
 
         <fieldset>
           <legend>{l.companyPermitInfo}</legend>
           <div>
             <label>{l.companyName}</label>
-            <select
+            <Dropdown
               name="companyName"
               value={formData.companyName}
               onChange={handleChange}
-              disabled={loading}
-            >
-              <option value="">{l.selectCompany}</option>
-              {companies.map((company) => (
-                <option key={company.company} value={company.company}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
-
-            <label>{l.representative}</label>
-            <select
-              name="representative"
-              value={formData.representative}
-              onChange={handleChange}
-            >
-              <option value="">{l.select}</option>
-              {representatives.map((rep) => (
-                <option key={rep.rep_id} value={rep.rep_id}>
-                  {language === 'ar' ? rep.rep_name_ar : rep.rep_name_en}
-                </option>
-              ))}
-            </select>
+              options={companies.map(company => ({
+                code: company.company,
+                en: company.name,
+                ar: company.name
+              }))}
+              language={language}
+              placeholder={l.selectCompany}
+            />
 
             <label>{l.permitType}</label>
-            <select
+            <Dropdown
               name="permitType"
               value={formData.permitType}
               onChange={handleChange}
-            >
-              <option value="">{l.select}</option>
-            </select>
+              options={[]}
+              language={language}
+              placeholder={l.select}
+            />
 
             <label>{l.transactionType}</label>
-            <select
+            <Dropdown
               name="transactionType"
               value={formData.transactionType}
               onChange={handleChange}
-            >
-              <option value="">{l.select}</option>
-              {transactionTypes.map((type) => (
-                <option key={type.code} value={type.code}>
-                  {language === 'ar' ? type.ar : type.en}
-                </option>
-              ))}
-            </select>
+              options={transactionTypes}
+              language={language}
+              placeholder={l.select}
+            />
           </div>
         </fieldset>
 
@@ -369,100 +409,96 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
             <legend>{l.shipDetails}</legend>
             <div>
               <label>{l.shipPrmNo}</label>
-              <input
+              <Input
                 name="shipPrmNo"
                 value={formData.shipPrmNo}
                 onChange={handleChange}
               />
 
               <label>{l.shipNumber}</label>
-              <input
+              <Input
                 name="shipNumber"
                 value={formData.shipNumber}
                 onChange={handleChange}
               />
 
               <label>{l.shipName}</label>
-              <input
+              <Input
                 name="shipName"
                 value={formData.shipName}
                 onChange={handleChange}
               />
 
               <label>{l.crewCount}</label>
-              <select
+              <Input
                 name="crewCount"
                 value={formData.crewCount}
                 onChange={handleChange}
-              >
-                <option value="">{l.select}</option>
-              </select>
+              />
 
               <label>{l.totalWeight}</label>
-              <input
+              <Input
                 name="totalWeight"
                 value={formData.totalWeight}
                 onChange={handleChange}
               />
 
               <label>{l.callSignChannel}</label>
-              <input
+              <Input
                 name="callSignChannel"
                 value={formData.callSignChannel}
                 onChange={handleChange}
               />
 
               <label>{l.navigLicValidity}</label>
-              <input
-                type="date"
+              <DatePicker
                 name="navigLicValidity"
                 value={formData.navigLicValidity}
                 onChange={handleChange}
               />
 
               <label>{l.shipsOwner}</label>
-              <input
+              <Input
                 name="shipsOwner"
                 value={formData.shipsOwner}
                 onChange={handleChange}
               />
 
               <label>{l.shipsCategory}</label>
-              <select
-                name="shipsCategory"
+              <ShipTypesDropDown
                 value={formData.shipsCategory}
-                onChange={handleChange}
-              >
-                <option value="">{l.select}</option>
-              </select>
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, shipsCategory: code }))
+                }
+              />
 
               <label>{l.shipsNationality}</label>
-              <input
-                name="shipsNationality"
-                value={formData.shipsNationality}
-                onChange={handleChange}
+              <TableDropDown
+                csvPath='/csv/CNIA_NATS.txt'
+                columns={2}
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, shipsNationality: code }))
+                }
               />
 
               <label>{l.registrationPort}</label>
-              <select
-                name="registrationPort"
+              <ShipPortsDropDown
                 value={formData.registrationPort}
-                onChange={handleChange}
-              >
-                <option value="">{l.select}</option>
-              </select>
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, registrationPort: code }))
+                }
+              />
 
               <label>{l.permanentHarbor}</label>
-              <select
-                name="permanentHarbor"
+              <ShipLocationsDropDown
                 value={formData.permanentHarbor}
-                onChange={handleChange}
-              >
-                <option value="">{l.select}</option>
-              </select>
+                onSelect={(code) =>
+                  setFormData(prev => ({ ...prev, permanentHarbor: code }))
+                }
+              />
 
               <label>{l.assignedActivity}</label>
-              <input
+              <Input
                 name="assignedActivity"
                 value={formData.assignedActivity}
                 onChange={handleChange}
@@ -480,11 +516,11 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
             {formData.crew.map((member, index) => (
               <div key={index}>
                 <label>{index + 1}</label>
-                <input
+                <Input
                   value={member.permissionNo}
                   onChange={(e) => handleCrewChange(index, 'permissionNo', e.target.value)}
                 />
-                <input
+                <Input
                   value={member.name}
                   onChange={(e) => handleCrewChange(index, 'name', e.target.value)}
                 />
@@ -495,7 +531,7 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
 
         <div>
           <label>{l.remarks}</label>
-          <input
+          <Textarea
             name="remarks"
             value={formData.remarks}
             onChange={handleChange}
@@ -511,15 +547,15 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
           </div>
           {formData.permittedLocations.map((location, index) => (
             <div key={index}>
-              <input
+              <Input
                 value={location.contractNo}
                 onChange={(e) => handleLocationChange(index, 'contractNo', e.target.value)}
               />
-              <input
+              <Input
                 value={location.contractLocationsNo}
                 onChange={(e) => handleLocationChange(index, 'contractLocationsNo', e.target.value)}
               />
-              <input
+              <Input
                 value={location.contractLocationsDesc}
                 onChange={(e) => handleLocationChange(index, 'contractLocationsDesc', e.target.value)}
               />
@@ -531,11 +567,26 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
           <button type="submit" disabled={loading}>
             {loading ? 'Loading...' : l.print}
           </button>
+          <button type="button" onClick={handleAutoFillSubmit} disabled={loading || !companies.length}>
+            {l.autoFillSubmit}
+          </button>
           <button type="button" onClick={handleClear}>
             {l.clear}
           </button>
         </div>
-      </form>
+      </Form>
+      <SubmitChoiceModal
+        open={showSubmitChoice}
+        onCancel={() => {
+          setShowSubmitChoice(false);
+          setIsDraftChoice(null);
+        }}
+        onChoose={async (draftChoice) => {
+          setIsDraftChoice(draftChoice);
+          setShowSubmitChoice(false);
+          await submitPayload(formData, draftChoice);
+        }}
+      />
       </div>
     </div>
     </main>
@@ -543,3 +594,9 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
 }
 
 export default Ship;
+
+
+
+
+
+
