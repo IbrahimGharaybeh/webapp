@@ -94,8 +94,16 @@ async function insertVehiclePermit(client, userId, body) {
       unified_no, name_arabic, nationality, religion_den,
       passport_no, full_residence_no, occupation, emirates_id_no,
       mobile_no, dob, expiry_date1, expiry_date2,
-      email, instagram, twitter, facebook, others, remarks, permitted_locations
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+      email, instagram, twitter, facebook, others, remarks, permitted_locations,
+      vehicle_prm_no, vehicle_number, plate_kind, owner_name, vehicle_category,
+      engine_number, corres_no, place_of_issue, vehicle_type, plate_color,
+      chassis_number, regist_expiry, corres_expiry, vehicle_color
+    ) VALUES (
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+      $11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
+      $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
+      $31,$32,$33,$34,$35,$36,$37,$38
+    )
     RETURNING *`,
     [
       userId, companyName, body.representative, body.permitType,
@@ -104,7 +112,10 @@ async function insertVehiclePermit(client, userId, body) {
       body.fullResidenceNo, body.occupation, body.emiratesIdNo,
       body.mobileNo, body.dob, body.expiryDate1, body.expiryDate2,
       body.email, body.instagram, body.twitter, body.facebook,
-      body.others, body.remarks, JSON.stringify(body.permittedLocations || [])
+      body.others, body.remarks, JSON.stringify(body.permittedLocations || []),
+      body.vehiclePrmNo, body.vehicleNumber, body.plateKind1, body.ownerName, body.vehicleCategory,
+      body.engineNo, body.corresNo, body.placeOfIssue, body.vehicleType, body.plateKind2,
+      body.chassisNumber, body.registExpiry, body.corresExpiry, body.vehicleColor
     ]
   );
 

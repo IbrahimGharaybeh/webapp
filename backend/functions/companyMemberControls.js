@@ -45,3 +45,15 @@ export async function removeMember(user, admin, company) {
     )
     return exclusion.rowCount;
 }
+
+export async function makeAdmin(user, admin, company) {
+    if (!await checkAdmin(admin, company)) throw new HttpError('Authorization denied', 403);
+    const update = await pool.query(
+        `update company_rep set is_admin = true where rep = $1 and company = $2`,
+        [user, company]
+    );
+    if (update.rowCount === 0) {
+        throw new HttpError('User is not a member of this company', 404);
+    }
+    return update.rowCount;
+}

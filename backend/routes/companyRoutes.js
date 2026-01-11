@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { checkCompanies, checkCompaniesAdmin } from '../functions/checkCompanies.js';
 import { makeCompany } from '../functions/makeCompany.js';
-import { inviteMember, removeMember } from '../functions/companyMemberControls.js';
+import { inviteMember, removeMember, makeAdmin } from '../functions/companyMemberControls.js';
 import { checkAdmin } from '../functions/checkAdmin.js';
 import {
   getPersonPermitIdsByCompany,
@@ -216,6 +216,26 @@ export default function companyRoutes() {
       console.error('removeMember failed', error);
       const status = error.status || 500;
       res.status(status).json({ error: 'Failed to remove member', details: error.message });
+    }
+  });
+
+  router.post('/companyMemberControls/makeAdmin', async (req, res) => {
+    try {
+      const admin = req.body.admin;
+      const user = req.body.user;
+      const company = req.body.company;
+      if (!admin || !user || !company) {
+        return res.status(400).json({ error: 'admin, user, and company are required' });
+      }
+      if (![admin, user, company].every(isUuid)) {
+        return res.status(400).json({ error: 'admin, user, and company must be UUIDs' });
+      }
+      const updated = await makeAdmin(user, admin, company);
+      res.json({ updated });
+    } catch (error) {
+      console.error('makeAdmin failed', error);
+      const status = error.status || 500;
+      res.status(status).json({ error: 'Failed to make admin', details: error.message });
     }
   });
 

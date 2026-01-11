@@ -283,6 +283,30 @@ function Dashboard() {
     gap: '4px',
   };
 
+  const memberActionsStyle: React.CSSProperties = {
+    display: 'flex',
+    gap: '8px',
+    marginTop: '6px',
+  };
+
+  const memberButtonStyle: React.CSSProperties = {
+    padding: '6px 10px',
+    borderRadius: '8px',
+    border: '1px solid #1f2937',
+    background: '#0f172a',
+    color: '#e2e8f0',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+  };
+
+  const dangerButtonStyle: React.CSSProperties = {
+    ...memberButtonStyle,
+    border: '1px solid #3f1d2e',
+    background: '#2b111d',
+    color: '#fda4af',
+  };
+
   const permitRowStyle: React.CSSProperties = {
     display: 'grid',
     gridTemplateColumns: '2fr 1fr 1fr 1fr',
@@ -515,10 +539,10 @@ function Dashboard() {
                           </div>
                           {filteredPermitList.map((permit) => {
                             const permitData = permit.permit as Record<string, unknown> | null | undefined;
-                            const nameArabic = (permitData?.name_arabic as string) ?? '—';
+                            const nameArabic = (permitData?.name_arabic as string) ?? 'N/A';
                             const representative = (permit.repName as string) ??
                               (permitData?.representative as string) ??
-                              '—';
+                              'N/A';
                             return (
                               <div key={`${permit.permitType}-${permit.permitId}`} style={permitRowStyle}>
                                 <div style={permitCellStyle}>{nameArabic}</div>
@@ -557,6 +581,55 @@ function Dashboard() {
                                   {rep.email}
                                 </span>
                               )}
+                              <div style={memberActionsStyle}>
+                                <button
+                                  style={dangerButtonStyle}
+                                  onClick={async () => {
+                                    if (!user?.id) return;
+                                    try {
+                                      await fetch(getApiUrl('/api/members/companyMemberControls/removeMember'), {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        credentials: 'include',
+                                        body: JSON.stringify({
+                                          admin: user.id,
+                                          user: rep.id,
+                                          company: company.company
+                                        })
+                                      });
+                                      void fetchRepresentatives(company.company, user.id);
+                                    } catch (err) {
+                                      console.error('Failed to remove member', err);
+                                    }
+                                  }}
+                                >
+                                  Remove
+                                </button>
+                                <button
+                                  style={memberButtonStyle}
+                                  disabled={Boolean(rep.is_admin)}
+                                  onClick={async () => {
+                                    if (!user?.id) return;
+                                    try {
+                                      await fetch(getApiUrl('/api/members/companyMemberControls/makeAdmin'), {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        credentials: 'include',
+                                        body: JSON.stringify({
+                                          admin: user.id,
+                                          user: rep.id,
+                                          company: company.company
+                                        })
+                                      });
+                                      void fetchRepresentatives(company.company, user.id);
+                                    } catch (err) {
+                                      console.error('Failed to make admin', err);
+                                    }
+                                  }}
+                                >
+                                  {rep.is_admin ? 'Admin' : 'Make admin'}
+                                </button>
+                              </div>
                             </div>
                           );
                         })}

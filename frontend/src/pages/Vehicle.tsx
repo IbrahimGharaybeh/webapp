@@ -49,6 +49,7 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
     passportNo: '',
     fullResidenceNo: '',
     occupation: '',
+    emiratesIdNo: '',
     personPrmNo: '',
     mobileNo: '',
     dob: '',
@@ -96,6 +97,8 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
       passportNo: 'Passport No.',
       fullResidenceNo: 'Full Residence No.',
       occupation: 'Occupation',
+      emiratesIdNo: 'Emirates ID No.',
+      emiratesIdNo: 'Emirates ID No.',
       personPrmNo: 'Person Prm. No.',
       mobileNo: 'Mobile No.',
       dob: 'Date Of Birth',
@@ -249,9 +252,10 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
       nationality: '',
       religionDen: '',
       passportNo: '',
-      fullResidenceNo: '',
-      occupation: '',
-      personPrmNo: '',
+    fullResidenceNo: '',
+    occupation: '',
+    emiratesIdNo: '',
+    personPrmNo: '',
       mobileNo: '',
       dob: '',
       expiryDate1: '',
@@ -350,6 +354,7 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
       passportNo: randomDigits(9),
       fullResidenceNo: randomDigits(10),
       occupation: '1',
+      emiratesIdNo: randomDigits(15),
       personPrmNo: randomDigits(8),
       mobileNo: randomDigits(10),
       dob: formatDate(dobDate),
@@ -510,6 +515,13 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
                 }
               />
 
+              <label>{l.emiratesIdNo}</label>
+              <Input
+                name="emiratesIdNo"
+                value={formData.emiratesIdNo}
+                onChange={handleChange}
+              />
+
               <label>{l.personPrmNo}</label>
               <Input
                 name="personPrmNo"
@@ -566,7 +578,7 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
 
               <label>{l.plateKind}</label>
               <TableDropDown 
-                csvPath='/csv/CNIA_JOBS.txt'
+                csvPath='/csv/CNIA_CAR_PLATE_TYPES.txt'
                 columns={2}
                 onSelect={(code) =>
                   setFormData(prev => ({ ...prev, plateKind1: code }))
@@ -621,7 +633,7 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
 
               <label>{l.plateKind}</label>
               <TableDropDown 
-                csvPath='/csv/platecolour.txt'
+                csvPath='/csv/CNIA_CAR_PLATE_COLORS.txt'
                 columns={2}
                 onSelect={(code) =>
                   setFormData(prev => ({ ...prev, plateKind2: code }))
