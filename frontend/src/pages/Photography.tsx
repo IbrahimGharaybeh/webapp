@@ -358,8 +358,8 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
           </button>
         </div>
 
-      <div className="permit-card">
-      <Form onSubmit={handleSubmit}>
+        <div className="permit-card">
+          <Form onSubmit={handleSubmit}>
         {submitSuccess && (
           <div style={{ padding: '1rem', backgroundColor: '#d4edda', color: '#155724', marginBottom: '1rem', borderRadius: '4px' }}>
             {l.submitSuccess ?? 'Form submitted successfully!'}
@@ -577,21 +577,21 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
             {l.clear}
           </button>
         </div>
-      </Form>
-      <SubmitChoiceModal
-        open={showSubmitChoice}
-        onCancel={() => {
-          setShowSubmitChoice(false);
-          setIsDraftChoice(null);
-        }}
-        onChoose={async (draftChoice) => {
-          setIsDraftChoice(draftChoice);
-          setShowSubmitChoice(false);
-          await submitPayload(formData, draftChoice);
-        }}
-      />
+            </Form>
+          <SubmitChoiceModal
+            open={showSubmitChoice}
+            onCancel={() => {
+              setShowSubmitChoice(false);
+              setIsDraftChoice(null);
+            }}
+            onChoose={async (draftChoice) => {
+              setIsDraftChoice(draftChoice);
+              setShowSubmitChoice(false);
+              await submitPayload(formData, draftChoice);
+            }}
+          />
+        </div>
       </div>
-    </div>
     </main>
   );
 }

@@ -476,8 +476,8 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
           </button>
         </div>
 
-      <div className="permit-card">
-      <Form onSubmit={handleSubmit}>
+        <div className="permit-card">
+          <Form onSubmit={handleSubmit}>
 
         {submitSuccess && (
           <div style={{ padding: '1rem', backgroundColor: '#d4edda', color: '#155724', marginBottom: '1rem', borderRadius: '4px' }}>
@@ -718,17 +718,17 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
             {l.clear}
           </button>
         </div>
-      </Form>
-      <SubmitChoiceModal
-        open={showSubmitChoice}
-        onCancel={() => {
-          setShowSubmitChoice(false);
-          setIsDraftChoice(null);
-        }}
-        onChoose={handleChoice}
-      />
+            </Form>
+          <SubmitChoiceModal
+            open={showSubmitChoice}
+            onCancel={() => {
+              setShowSubmitChoice(false);
+              setIsDraftChoice(null);
+            }}
+            onChoose={handleChoice}
+          />
+        </div>
       </div>
-    </div>
     </main>
   );
 }

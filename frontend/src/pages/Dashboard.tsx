@@ -1,27 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import FormHistory from '../components/FormHistory/FormHistory';
+import PermitFiltersTable from '../components/Dashboard/PermitFiltersTable';
+import ProfileSnapshot from '../components/Dashboard/ProfileSnapshot';
+import RepresentativeList from '../components/Dashboard/RepresentativeList';
+import SidebarMenu, { type DashboardViewKey } from '../components/Dashboard/SidebarMenu';
+import type { Company, PermitEntry, Representative } from '../components/Dashboard/types';
 import { useAuth } from '../lib/AuthContext';
 import { getApiUrl } from '../lib/api';
-
-type Company = {
-  company: string;
-  name: string;
-};
-
-type Representative = {
-  id: string;
-  name: string | null;
-  username: string | null;
-  email: string | null;
-  is_admin?: boolean;
-};
-
-type PermitEntry = {
-  permitType: number;
-  permitId: number;
-  isDraft?: boolean;
-  permit?: unknown;
-};
 
 function Dashboard() {
   const { user, loading } = useAuth();
@@ -35,10 +19,12 @@ function Dashboard() {
   const [permitsByCompany, setPermitsByCompany] = useState<Record<string, PermitEntry[]>>({});
   const [permitLoading, setPermitLoading] = useState<Record<string, boolean>>({});
   const [permitErrors, setPermitErrors] = useState<Record<string, string>>({});
-  const [permitNameFilters, setPermitNameFilters] = useState<Record<string, string>>({});
-  const [permitDraftFilters, setPermitDraftFilters] = useState<Record<string, string>>({});
-  const [permitTypeFilters, setPermitTypeFilters] = useState<Record<string, string>>({});
   const [expandedCompanyId, setExpandedCompanyId] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<DashboardViewKey>('profile');
+  const [historyPermitNameFilter, setHistoryPermitNameFilter] = useState('');
+  const [historyPermitDraftFilter, setHistoryPermitDraftFilter] = useState('all');
+  const [historyPermitTypeFilter, setHistoryPermitTypeFilter] = useState('all');
+  const [historyCompanyFilter, setHistoryCompanyFilter] = useState('all');
 
   useEffect(() => {
     if (!user?.id) return;
@@ -214,6 +200,13 @@ function Dashboard() {
     gap: '20px',
   };
 
+  const contentLayoutStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: '240px 1fr',
+    gap: '24px',
+    alignItems: 'start',
+  };
+
   const cardStyle: React.CSSProperties = {
     background: '#0b1224',
     border: '1px solid #1f2937',
@@ -228,32 +221,6 @@ function Dashboard() {
     fontWeight: 700,
     color: '#f8fafc',
   };
-
-  const labelStyle: React.CSSProperties = {
-    margin: 0,
-    fontSize: '12px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: '#94a3b8',
-  };
-
-  const valueStyle: React.CSSProperties = {
-    margin: 0,
-    fontSize: '16px',
-    fontWeight: 600,
-    color: '#e2e8f0',
-  };
-
-  const chipStyle = (verified: boolean): React.CSSProperties => ({
-    alignSelf: 'flex-start',
-    padding: '6px 12px',
-    borderRadius: '999px',
-    fontSize: '12px',
-    fontWeight: 600,
-    backgroundColor: verified ? 'rgba(34,197,94,0.18)' : 'rgba(251,191,36,0.2)',
-    color: verified ? '#4ade80' : '#fbbf24',
-    border: `1px solid ${verified ? 'rgba(34,197,94,0.4)' : 'rgba(251,191,36,0.5)'}`
-  });
 
   const listStyle: React.CSSProperties = {
     margin: 0,
@@ -274,62 +241,6 @@ function Dashboard() {
     cursor: 'pointer',
   };
 
-  const repRowStyle: React.CSSProperties = {
-    background: '#0b1224',
-    border: '1px solid #1f2937',
-    borderRadius: '10px',
-    padding: '10px 12px',
-    display: 'grid',
-    gap: '4px',
-  };
-
-  const memberActionsStyle: React.CSSProperties = {
-    display: 'flex',
-    gap: '8px',
-    marginTop: '6px',
-  };
-
-  const memberButtonStyle: React.CSSProperties = {
-    padding: '6px 10px',
-    borderRadius: '8px',
-    border: '1px solid #1f2937',
-    background: '#0f172a',
-    color: '#e2e8f0',
-    fontSize: '12px',
-    fontWeight: 600,
-    cursor: 'pointer',
-  };
-
-  const dangerButtonStyle: React.CSSProperties = {
-    ...memberButtonStyle,
-    border: '1px solid #3f1d2e',
-    background: '#2b111d',
-    color: '#fda4af',
-  };
-
-  const permitRowStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: '2fr 1fr 1fr 1fr',
-    gap: '12px',
-    padding: '8px 10px',
-    borderBottom: '1px solid #1f2937',
-    color: '#cbd5f5',
-    fontSize: '12px',
-  };
-
-  const permitHeaderStyle: React.CSSProperties = {
-    ...permitRowStyle,
-    fontWeight: 600,
-    color: '#e2e8f0',
-    background: '#0f172a',
-  };
-
-  const permitCellStyle: React.CSSProperties = {
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-  };
-
   const permitTypeLabels: Record<number, string> = {
     1: 'Person',
     2: 'Vehicle',
@@ -342,6 +253,120 @@ function Dashboard() {
     label,
   }));
 
+  useEffect(() => {
+    if (activeView !== 'history' || !user?.id) return;
+    adminCompanies.forEach((company) => {
+      const hasPermits = Boolean(permitsByCompany[company.company]);
+      const isPermitsLoading = Boolean(permitLoading[company.company]);
+      if (!hasPermits && !isPermitsLoading) {
+        void fetchCompanyPermits(company.company, user.id);
+      }
+    });
+  }, [activeView, adminCompanies, permitsByCompany, permitLoading, user?.id]);
+
+  const handleHistoryPermitNameFilterChange = (value: string) => {
+    setHistoryPermitNameFilter(value);
+  };
+
+  const handleHistoryPermitTypeFilterChange = (value: string) => {
+    setHistoryPermitTypeFilter(value);
+  };
+
+  const handleHistoryPermitDraftFilterChange = (value: string) => {
+    setHistoryPermitDraftFilter(value);
+  };
+
+  const handleHistoryCompanyFilterChange = (value: string) => {
+    setHistoryCompanyFilter(value);
+  };
+
+  const handleRemoveMember = async (companyId: string, repId: string) => {
+    if (!user?.id) return;
+    try {
+      await fetch(getApiUrl('/api/members/companyMemberControls/removeMember'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          admin: user.id,
+          user: repId,
+          company: companyId,
+        }),
+      });
+      void fetchRepresentatives(companyId, user.id);
+    } catch (err) {
+      console.error('Failed to remove member', err);
+    }
+  };
+
+  const handleMakeAdmin = async (companyId: string, repId: string) => {
+    if (!user?.id) return;
+    try {
+      await fetch(getApiUrl('/api/members/companyMemberControls/makeAdmin'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          admin: user.id,
+          user: repId,
+          company: companyId,
+        }),
+      });
+      void fetchRepresentatives(companyId, user.id);
+    } catch (err) {
+      console.error('Failed to make admin', err);
+    }
+  };
+
+  const historyCompanyOptions = adminCompanies.map((company) => ({
+    value: company.company,
+    label: company.name,
+  }));
+
+  const historyPermitList = adminCompanies.flatMap((company) =>
+    (permitsByCompany[company.company] || []).map((permit) => ({
+      ...permit,
+      companyId: company.company,
+      companyName: company.name,
+    }))
+  );
+
+  const historyHasPermitEntry = adminCompanies.some((company) =>
+    Object.prototype.hasOwnProperty.call(permitsByCompany, company.company)
+  );
+
+  const historyPermitLoadingState = adminCompanies.some(
+    (company) => permitLoading[company.company]
+  );
+
+  const historyPermitErrors = adminCompanies
+    .map((company) => permitErrors[company.company])
+    .filter((value): value is string => Boolean(value));
+
+  const historyPermitError = historyPermitErrors[0] || '';
+
+  const filteredHistoryPermitList = historyPermitList.filter((permit) => {
+    const permitData = permit.permit as Record<string, unknown> | null | undefined;
+    const nameArabic = (permitData?.name_arabic as string) ?? '';
+    const matchesName = historyPermitNameFilter.trim().length === 0
+      || nameArabic.toLowerCase().includes(historyPermitNameFilter.trim().toLowerCase());
+    const matchesDraft =
+      historyPermitDraftFilter === 'all'
+        ? true
+        : historyPermitDraftFilter === 'true'
+          ? Boolean(permit.isDraft)
+          : !permit.isDraft;
+    const matchesType =
+      historyPermitTypeFilter === 'all'
+        ? true
+        : String(permit.permitType) === historyPermitTypeFilter;
+    const matchesCompany =
+      historyCompanyFilter === 'all'
+        ? true
+        : String(permit.companyId) === historyCompanyFilter;
+    return matchesName && matchesDraft && matchesType && matchesCompany;
+  });
+
   return (
     <main style={pageStyle}>
       <div style={containerStyle}>
@@ -353,296 +378,118 @@ function Dashboard() {
           </div>
         </header>
 
-        <div style={gridStyle}>
-          <section style={cardStyle}>
-            <h2 style={sectionTitleStyle}>Profile snapshot</h2>
-            <p style={labelStyle}>Signed in as</p>
-            <p style={valueStyle}>{displayName}</p>
-            <p style={{ margin: 0, color: '#94a3b8' }}>{user?.email || 'No email on file'}</p>
-            {!loading && (
-              <span style={chipStyle(Boolean(user?.emailVerified))}>
-                {user?.emailVerified ? 'Email verified' : 'Email not verified'}
-              </span>
+        <div style={contentLayoutStyle}>
+          <SidebarMenu activeKey={activeView} onSelect={setActiveView} />
+          <div style={gridStyle}>
+            {activeView === 'profile' && (
+              <ProfileSnapshot
+                cardStyle={cardStyle}
+                displayName={displayName}
+                user={user}
+                loading={loading}
+              />
             )}
-          </section>
 
-          <section style={cardStyle}>
-            <h2 style={sectionTitleStyle}>Companies you belong to</h2>
-            {companyLoading && <p style={{ margin: 0, color: '#94a3b8' }}>Loading...</p>}
-            {!companyLoading && companyError && (
-              <p style={{ margin: 0, color: '#fda4af' }}>{companyError}</p>
-            )}
-            {!companyLoading && !companyError && (
-              <ul style={listStyle}>
-                {memberCompanies.length === 0 && <li>No member companies yet.</li>}
-                {memberCompanies.map((company) => (
-                  <li key={company.company}>{company.name}</li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section style={cardStyle}>
-            <h2 style={sectionTitleStyle}>Companies you admin</h2>
-            {companyLoading && <p style={{ margin: 0, color: '#94a3b8' }}>Loading...</p>}
-            {!companyLoading && companyError && (
-              <p style={{ margin: 0, color: '#fda4af' }}>{companyError}</p>
-            )}
-            {!companyLoading && !companyError && adminCompanies.length === 0 && (
-              <p style={{ margin: 0, color: '#94a3b8' }}>
-                You are not an admin for any companies yet.
-              </p>
-            )}
-            {!companyLoading && !companyError && adminCompanies.map((company) => {
-              const reps = representativesByCompany[company.company] || [];
-              const isLoading = representativeLoading[company.company];
-              const error = representativeErrors[company.company];
-              const hasPermitEntry = Object.prototype.hasOwnProperty.call(
-                permitsByCompany,
-                company.company
-              );
-              const permitList = permitsByCompany[company.company] || [];
-              const permitLoadingState = permitLoading[company.company];
-              const permitError = permitErrors[company.company];
-              const permitNameFilter = permitNameFilters[company.company] || '';
-              const permitDraftFilter = permitDraftFilters[company.company] || 'all';
-              const permitTypeFilter = permitTypeFilters[company.company] || 'all';
-              const filteredPermitList = permitList.filter((permit) => {
-                const permitData = permit.permit as Record<string, unknown> | null | undefined;
-                const nameArabic = (permitData?.name_arabic as string) ?? '';
-                const matchesName = permitNameFilter.trim().length === 0
-                  || nameArabic.toLowerCase().includes(permitNameFilter.trim().toLowerCase());
-                const matchesDraft =
-                  permitDraftFilter === 'all'
-                    ? true
-                    : permitDraftFilter === 'true'
-                      ? Boolean(permit.isDraft)
-                      : !permit.isDraft;
-                const matchesType =
-                  permitTypeFilter === 'all'
-                    ? true
-                    : String(permit.permitType) === permitTypeFilter;
-                return matchesName && matchesDraft && matchesType;
-              });
-              const isExpanded = expandedCompanyId === company.company;
-              return (
-                <div key={company.company} style={{ display: 'grid', gap: '10px' }}>
-                  <div
-                    style={rowStyle}
-                    onClick={() => {
-                      const nextExpanded = isExpanded ? null : company.company;
-                      setExpandedCompanyId(nextExpanded);
-                      if (!isExpanded && user?.id) {
-                        const hasPermits = Boolean(permitsByCompany[company.company]);
-                        const isPermitsLoading = Boolean(permitLoading[company.company]);
-                        if (!hasPermits && !isPermitsLoading) {
-                          void fetchCompanyPermits(company.company, user.id);
-                        }
-                      }
-                    }}
-                  >
-                    <span style={{ fontWeight: 600 }}>{company.name}</span>
-                    <span style={{ color: '#94a3b8' }}>
-                      {isExpanded ? 'Hide' : 'View'}
-                    </span>
-                  </div>
-                  {isExpanded && (
-                    <div style={{ display: 'grid', gap: '8px' }}>
-                      <div style={{ display: 'grid', gap: '8px' }}>
-                        <input
-                          type="text"
-                          placeholder="Search by name..."
-                          value={permitNameFilter}
-                          onChange={(event) =>
-                            setPermitNameFilters((prev) => ({
-                              ...prev,
-                              [company.company]: event.target.value
-                            }))
-                          }
-                          style={{
-                            padding: '8px 10px',
-                            borderRadius: '8px',
-                            border: '1px solid #1f2937',
-                            background: '#0f172a',
-                            color: '#e2e8f0'
-                          }}
-                        />
-                        <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: '1fr 1fr' }}>
-                          <select
-                            value={permitTypeFilter}
-                            onChange={(event) =>
-                              setPermitTypeFilters((prev) => ({
-                                ...prev,
-                                [company.company]: event.target.value
-                              }))
-                            }
-                            style={{
-                              padding: '8px 10px',
-                              borderRadius: '8px',
-                              border: '1px solid #1f2937',
-                              background: '#0f172a',
-                              color: '#e2e8f0'
-                            }}
-                          >
-                            <option value="all">All Permit Types</option>
-                            {permitTypeOptions.map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
-                          <select
-                            value={permitDraftFilter}
-                            onChange={(event) =>
-                              setPermitDraftFilters((prev) => ({
-                                ...prev,
-                                [company.company]: event.target.value
-                              }))
-                            }
-                            style={{
-                              padding: '8px 10px',
-                              borderRadius: '8px',
-                              border: '1px solid #1f2937',
-                              background: '#0f172a',
-                              color: '#e2e8f0'
-                            }}
-                          >
-                            <option value="all">All Draft States</option>
-                            <option value="true">Draft</option>
-                            <option value="false">Final</option>
-                          </select>
-                        </div>
-                      </div>
-                      {hasPermitEntry &&
-                        !permitLoadingState &&
-                        !permitError &&
-                        filteredPermitList.length === 0 && (
-                        <p style={{ margin: 0, color: '#94a3b8' }}>
-                          No permits found.
-                        </p>
-                      )}
-                      {permitLoadingState && (
-                        <p style={{ margin: 0, color: '#94a3b8' }}>
-                          Loading permits...
-                        </p>
-                      )}
-                      {!permitLoadingState && permitError && (
-                        <p style={{ margin: 0, color: '#fda4af' }}>{permitError}</p>
-                      )}
-                      {!permitLoadingState && !permitError && filteredPermitList.length > 0 && (
-                        <div style={{ border: '1px solid #1f2937', borderRadius: '10px', overflow: 'hidden' }}>
-                          <div style={permitHeaderStyle}>
-                            <div style={permitCellStyle}>Name (Arabic)</div>
-                            <div style={permitCellStyle}>Permit Type</div>
-                            <div style={permitCellStyle}>Representative</div>
-                            <div style={permitCellStyle}>Is Draft</div>
-                          </div>
-                          {filteredPermitList.map((permit) => {
-                            const permitData = permit.permit as Record<string, unknown> | null | undefined;
-                            const nameArabic = (permitData?.name_arabic as string) ?? 'N/A';
-                            const representative = (permit.repName as string) ??
-                              (permitData?.representative as string) ??
-                              'N/A';
-                            return (
-                              <div key={`${permit.permitType}-${permit.permitId}`} style={permitRowStyle}>
-                                <div style={permitCellStyle}>{nameArabic}</div>
-                                <div style={permitCellStyle}>
-                                  {permitTypeLabels[permit.permitType] || 'Unknown'}
-                                </div>
-                                <div style={permitCellStyle}>{representative}</div>
-                                <div style={permitCellStyle}>{permit.isDraft ? 'true' : 'false'}</div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {isLoading && (
-                        <p style={{ margin: 0, color: '#94a3b8' }}>
-                          Loading representatives...
-                        </p>
-                      )}
-                      {!isLoading && error && (
-                        <p style={{ margin: 0, color: '#fda4af' }}>{error}</p>
-                      )}
-                      {!isLoading && !error && reps.length === 0 && (
-                        <p style={{ margin: 0, color: '#94a3b8' }}>
-                          No representatives found.
-                        </p>
-                      )}
-                      {!isLoading &&
-                        !error &&
-                        reps.map((rep) => {
-                          const label = rep.name || rep.username || rep.email || rep.id;
-                          return (
-                            <div key={rep.id} style={repRowStyle}>
-                              <span style={{ fontWeight: 600 }}>{label}</span>
-                              {rep.email && (
-                                <span style={{ color: '#94a3b8', fontSize: '13px' }}>
-                                  {rep.email}
-                                </span>
-                              )}
-                              <div style={memberActionsStyle}>
-                                <button
-                                  style={dangerButtonStyle}
-                                  onClick={async () => {
-                                    if (!user?.id) return;
-                                    try {
-                                      await fetch(getApiUrl('/api/members/companyMemberControls/removeMember'), {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        credentials: 'include',
-                                        body: JSON.stringify({
-                                          admin: user.id,
-                                          user: rep.id,
-                                          company: company.company
-                                        })
-                                      });
-                                      void fetchRepresentatives(company.company, user.id);
-                                    } catch (err) {
-                                      console.error('Failed to remove member', err);
-                                    }
-                                  }}
-                                >
-                                  Remove
-                                </button>
-                                <button
-                                  style={memberButtonStyle}
-                                  disabled={Boolean(rep.is_admin)}
-                                  onClick={async () => {
-                                    if (!user?.id) return;
-                                    try {
-                                      await fetch(getApiUrl('/api/members/companyMemberControls/makeAdmin'), {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        credentials: 'include',
-                                        body: JSON.stringify({
-                                          admin: user.id,
-                                          user: rep.id,
-                                          company: company.company
-                                        })
-                                      });
-                                      void fetchRepresentatives(company.company, user.id);
-                                    } catch (err) {
-                                      console.error('Failed to make admin', err);
-                                    }
-                                  }}
-                                >
-                                  {rep.is_admin ? 'Admin' : 'Make admin'}
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
+            {activeView === 'companies' && (
+              <>
+                <section style={cardStyle}>
+                  <h2 style={sectionTitleStyle}>Companies you belong to</h2>
+                  {companyLoading && <p style={{ margin: 0, color: '#94a3b8' }}>Loading...</p>}
+                  {!companyLoading && companyError && (
+                    <p style={{ margin: 0, color: '#fda4af' }}>{companyError}</p>
                   )}
-                </div>
-              );
-            })}
-          </section>
+                  {!companyLoading && !companyError && (
+                    <ul style={listStyle}>
+                      {memberCompanies.length === 0 && <li>No member companies yet.</li>}
+                      {memberCompanies.map((company) => (
+                        <li key={company.company}>{company.name}</li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
 
-          <section style={cardStyle}>
-            <FormHistory />
-          </section>
+                <section style={cardStyle}>
+                  <h2 style={sectionTitleStyle}>Companies you admin</h2>
+                  {companyLoading && <p style={{ margin: 0, color: '#94a3b8' }}>Loading...</p>}
+                  {!companyLoading && companyError && (
+                    <p style={{ margin: 0, color: '#fda4af' }}>{companyError}</p>
+                  )}
+                  {!companyLoading && !companyError && adminCompanies.length === 0 && (
+                    <p style={{ margin: 0, color: '#94a3b8' }}>
+                      You are not an admin for any companies yet.
+                    </p>
+                  )}
+                  {!companyLoading && !companyError && adminCompanies.map((company) => {
+                    const reps = representativesByCompany[company.company] || [];
+                    const isLoading = representativeLoading[company.company];
+                    const error = representativeErrors[company.company];
+                    const isExpanded = expandedCompanyId === company.company;
+                    return (
+                      <div key={company.company} style={{ display: 'grid', gap: '10px' }}>
+                        <div
+                          style={rowStyle}
+                          onClick={() => {
+                            const nextExpanded = isExpanded ? null : company.company;
+                            setExpandedCompanyId(nextExpanded);
+                          }}
+                        >
+                          <span style={{ fontWeight: 600 }}>{company.name}</span>
+                          <span style={{ color: '#94a3b8' }}>
+                            {isExpanded ? 'Hide' : 'View'}
+                          </span>
+                        </div>
+                        {isExpanded && (
+                          <div style={{ display: 'grid', gap: '8px' }}>
+                            <RepresentativeList
+                              representatives={reps}
+                              loading={isLoading}
+                              error={error}
+                              onRemove={(repId) => handleRemoveMember(company.company, repId)}
+                              onMakeAdmin={(repId) => handleMakeAdmin(company.company, repId)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </section>
+              </>
+            )}
+
+            {activeView === 'history' && (
+              <section style={cardStyle}>
+                <h2 style={sectionTitleStyle}>Permit history</h2>
+                {companyLoading && <p style={{ margin: 0, color: '#94a3b8' }}>Loading...</p>}
+                {!companyLoading && companyError && (
+                  <p style={{ margin: 0, color: '#fda4af' }}>{companyError}</p>
+                )}
+                {!companyLoading && !companyError && adminCompanies.length === 0 && (
+                  <p style={{ margin: 0, color: '#94a3b8' }}>
+                    You are not an admin for any companies yet.
+                  </p>
+                )}
+                {!companyLoading && !companyError && adminCompanies.length > 0 && (
+                  <PermitFiltersTable
+                    permitNameFilter={historyPermitNameFilter}
+                    permitDraftFilter={historyPermitDraftFilter}
+                    permitTypeFilter={historyPermitTypeFilter}
+                    companyFilter={historyCompanyFilter}
+                    companyOptions={historyCompanyOptions}
+                    permitTypeOptions={permitTypeOptions}
+                    permitTypeLabels={permitTypeLabels}
+                    filteredPermitList={filteredHistoryPermitList}
+                    hasPermitEntry={historyHasPermitEntry}
+                    permitLoadingState={historyPermitLoadingState}
+                    permitError={historyPermitError}
+                    onNameFilterChange={handleHistoryPermitNameFilterChange}
+                    onTypeFilterChange={handleHistoryPermitTypeFilterChange}
+                    onDraftFilterChange={handleHistoryPermitDraftFilterChange}
+                    onCompanyFilterChange={handleHistoryCompanyFilterChange}
+                  />
+                )}
+              </section>
+            )}
+          </div>
         </div>
       </div>
     </main>

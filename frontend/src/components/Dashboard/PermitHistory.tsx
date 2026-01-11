@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getApiUrl } from '../../lib/api';
 
 const PERMIT_TYPES: Record<number, string> = {
   1: 'Person',
   2: 'Vehicle',
   3: 'Ship',
-  4: 'Photography'
+  4: 'Photography',
 };
 
 const PERMIT_ROUTES: Record<number, string> = {
@@ -20,61 +19,55 @@ const getPermitType = (permitId: number): string => {
   return PERMIT_TYPES[permitId] || 'Unknown';
 };
 
-interface PermitData {
+type PermitData = {
   id: number;
   permit_type: number;
   user_id: string;
   company_id: string;
   posted_at: string;
   permit_id: number;
-  rep?: string | null;
-  representative?: string | null;
-  name_arabic?: string | null;
-  nameArabic?: string | null;
-  is_draft?: boolean | null;
-  isDraft?: boolean | null;
-}
+};
 
-interface Company {
+type Company = {
   company_id: string;
   company_name_ar: string;
   company_name_en: string;
-}
+};
 
-interface FormHistoryProps {
+type PermitHistoryProps = {
   apiEndpoint?: string;
   onRowClick?: (item: PermitData) => void;
   className?: string;
-}
+};
 
-function FormHistory({
+function PermitHistory({
   apiEndpoint = '/api/data/permithistory',
   onRowClick,
-  className = ''
-}: FormHistoryProps) {
+  className = '',
+}: PermitHistoryProps) {
   const navigate = useNavigate();
   const [permitData, setPermitData] = useState<PermitData[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [selectedPermitType, setSelectedPermitType] = useState<string>('all');
   const [selectedCompany, setSelectedCompany] = useState<string>('all');
 
   const fetchUserCompanies = async () => {
     try {
-      // TODO: Replace with actual API call when authentication is ready
-      const response = await fetch(getApiUrl('/api/data/companyretrieval'), {
+      const response = await fetch('/api/data/companyretrieval', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include'
       });
 
       if (response.ok) {
         const result = await response.json();
-        const companiesData = (result.data || []).map(item => item.company_info);
+        const companiesData = (result.data || []).map(
+          (item: { company_info: Company }) => item.company_info
+        );
         setCompanies(companiesData);
       }
     } catch (err) {
@@ -86,43 +79,44 @@ function FormHistory({
     try {
       setLoading(true);
       setError(null);
-      
+
       const params = new URLSearchParams();
-      
+
       if (selectedCompany !== 'all') {
         params.append('company_id', selectedCompany);
       }
-      
-      const url = `${getApiUrl(apiEndpoint)}?${params.toString()}`;
-      
+
+      const url = `${apiEndpoint}?${params.toString()}`;
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include'
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       const dataList = Array.isArray(data) ? data : [];
-      
+
       let filtered = dataList;
       if (selectedPermitType !== 'all') {
-        filtered = dataList.filter(item => item.permit_type === parseInt(selectedPermitType));
+        filtered = dataList.filter(
+          (item: PermitData) => item.permit_type === parseInt(selectedPermitType, 10)
+        );
       }
-      
+
       setPermitData(filtered);
-      
+
       if (filtered.length === 0 && (selectedPermitType !== 'all' || selectedCompany !== 'all')) {
         setError('No permits match the selected filters');
       } else if (filtered.length === 0) {
         setError('No data found');
       }
-    } catch (err: any) {
+    } catch (err) {
       setError('Failed to load data');
       console.error('Error fetching permit data:', err);
       setPermitData([]);
@@ -133,34 +127,28 @@ function FormHistory({
 
   const fetchPermitAndNavigate = async (item: PermitData) => {
     try {
-      console.log('Fetching permit details for ID:', item.id);
-      
-      const response = await fetch(getApiUrl(`/api/permits/${item.id}`), {
+      const response = await fetch(`/api/permits/${item.id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include'
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const permitData = await response.json();
-      console.log('Permit data received:', permitData);
-      
+      const permitDetails = await response.json();
       const route = PERMIT_ROUTES[item.permit_type];
-      
+
       if (route) {
-        navigate(route, { state: { permitData } });
+        navigate(route, { state: { permitData: permitDetails } });
       } else {
         alert(`Viewing ${getPermitType(item.permit_type)} permits is not yet implemented`);
       }
-      
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching permit details:', err);
-      alert('Failed to load permit details: ' + err.message);
+      alert('Failed to load permit details');
     }
   };
 
@@ -173,9 +161,8 @@ function FormHistory({
   }, [selectedPermitType, selectedCompany]);
 
   const handleRowClick = async (item: PermitData) => {
-    console.log('Row clicked:', item);
     await fetchPermitAndNavigate(item);
-    
+
     if (onRowClick) {
       onRowClick(item);
     }
@@ -187,22 +174,18 @@ function FormHistory({
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
   const getCompanyName = (companyId: string) => {
-    const company = companies.find(c => c.company_id === companyId);
+    const company = companies.find((c) => c.company_id === companyId);
     return company ? company.company_name_en : companyId;
-  };
-
-  const getRepName = (item: PermitData) => {
-    return item.rep || item.representative || item.user_id || 'Unknown';
   };
 
   return (
     <div className={className}>
-      <h2>Form History</h2>
+      <h2>Permit history</h2>
 
       <div>
         <div>
@@ -213,7 +196,7 @@ function FormHistory({
             <select
               id="permitTypeFilter"
               value={selectedPermitType}
-              onChange={(e) => setSelectedPermitType(e.target.value)}
+              onChange={(event) => setSelectedPermitType(event.target.value)}
             >
               <option value="all">All Permit Types</option>
               {Object.entries(PERMIT_TYPES).map(([id, name]) => (
@@ -229,7 +212,7 @@ function FormHistory({
             <select
               id="companyFilter"
               value={selectedCompany}
-              onChange={(e) => setSelectedCompany(e.target.value)}
+              onChange={(event) => setSelectedCompany(event.target.value)}
             >
               <option value="all">All Companies</option>
               {companies.map((company) => (
@@ -277,9 +260,6 @@ function FormHistory({
                         Company: {getCompanyName(item.company_id)}
                       </p>
                       <p>
-                        Representative: {getRepName(item)}
-                      </p>
-                      <p>
                         Posted at: {formatDate(item.posted_at)}
                       </p>
                     </div>
@@ -288,9 +268,11 @@ function FormHistory({
               </div>
             ))}
           </div>
-          
+
           <div>
-            <p>Showing {permitData.length} {permitData.length === 1 ? 'permit' : 'permits'}</p>
+            <p>
+              Showing {permitData.length} {permitData.length === 1 ? 'permit' : 'permits'}
+            </p>
           </div>
         </div>
       )}
@@ -304,4 +286,4 @@ function FormHistory({
   );
 }
 
-export default FormHistory;
+export default PermitHistory;
