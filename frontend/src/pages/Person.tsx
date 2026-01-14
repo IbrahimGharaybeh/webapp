@@ -8,6 +8,8 @@ import Input from '../components/Input/Input';
 import Textarea from '../components/Textarea/Textarea';
 import { TableDropDown } from '../components/DropDownComplicated/TableDropDown';
 import SubmitChoiceModal from '../components/SubmitChoiceModal';
+import SidebarMenu from '../components/Dashboard/SidebarMenu';
+import SearchList from '../components/SearchList/SearchList';
 
 interface Company {
   company: string;
@@ -39,6 +41,7 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
   const [religions, setReligions] = useState<Religion[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
   const [showSubmitChoice, setShowSubmitChoice] = useState(false);
   const [isDraftChoice, setIsDraftChoice] = useState<boolean | null>(null);
 
@@ -124,6 +127,18 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
     color: '#f8fafc',
     cursor: 'pointer',
     boxShadow: '0 10px 30px rgba(0,0,0,0.25)'
+  };
+
+  const layoutStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: '240px 1fr',
+    gap: '24px',
+    alignItems: 'start'
+  };
+
+  const sidebarColumnStyle: React.CSSProperties = {
+    display: 'grid',
+    gap: '16px'
   };
 
   const sectionStyle: React.CSSProperties = {
@@ -351,6 +366,18 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
       }))
     });
     setSubmitSuccess(false);
+    setSubmitError(false);
+  };
+
+  const normalizePayload = (payload: typeof formData) => {
+    return Object.fromEntries(
+      Object.entries(payload).map(([key, value]) => {
+        if (typeof value === 'string' && value.trim() === '') {
+          return [key, null];
+        }
+        return [key, value];
+      })
+    ) as typeof formData;
   };
 
   const submitPayload = async (payload: typeof formData, draftChoice: boolean | null) => {
@@ -358,7 +385,9 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
     try {
       setLoading(true);
       setSubmitSuccess(false);
-      console.log('Submitting person form payload:', payload);
+      setSubmitError(false);
+      const normalizedPayload = normalizePayload(payload);
+      console.log('Submitting person form payload:', normalizedPayload);
       
       // TODO: Replace with actual API endpoint
       const response = await fetch(`${API_URL}/api/data/person`, {
@@ -368,14 +397,15 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
         },
         credentials: 'include',
         body: JSON.stringify({
-          ...payload,
-          companyId: payload.companyName,
+          ...normalizedPayload,
+          companyId: normalizedPayload.companyName,
           isDraft: draftChoice
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Submission failed');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Submission failed');
       }
 
       if (!draftChoice) {
@@ -391,6 +421,7 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
       
     } catch (error) {
       console.error('Error submitting form:', error);
+      setSubmitError(true);
     } finally {
       setLoading(false);
     }
@@ -398,6 +429,11 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!formData.companyName || !formData.permitType || !formData.transactionType) {
+      setSubmitSuccess(false);
+      setSubmitError(true);
+      return;
+    }
     setIsDraftChoice(null);
     setShowSubmitChoice(true);
   };
@@ -466,6 +502,8 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
     setLanguage(prev => prev === 'en' ? 'ar' : 'en');
   };
 
+  const peopleUrl = `${API_URL}/api/data/people`;
+
   return (
     <main className="permit-page">
       <div className="permit-container" dir={language === 'ar' ? 'rtl' : 'ltr'}>
@@ -476,14 +514,45 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
           </button>
         </div>
 
-        <div className="permit-card">
-          <Form onSubmit={handleSubmit}>
-
-        {submitSuccess && (
-          <div style={{ padding: '1rem', backgroundColor: '#d4edda', color: '#155724', marginBottom: '1rem', borderRadius: '4px' }}>
-            {l.submitSuccess}
+        <div style={layoutStyle}>
+          <div style={sidebarColumnStyle}>
+            <SidebarMenu activeKey="profile" onSelect={() => {}} />
+            <SearchList
+              fetchUrl={peopleUrl}
+              rowField="name_arabic"
+              onSelect={(item) => {
+                const data = item.data ?? {};
+                setFormData((prev) => ({
+                  ...prev,
+                  companyName: String(data.company ?? prev.companyName ?? ''),
+                  nameArabic: String(data.name_arabic ?? prev.nameArabic ?? ''),
+                  passportNo: String(data.passport_no ?? prev.passportNo ?? ''),
+                  fullResidenceNo: String(data.full_residence_no ?? prev.fullResidenceNo ?? ''),
+                  emiratesIdNo: String(data.emirates_id_no ?? prev.emiratesIdNo ?? ''),
+                  nationality: String(data.nationality ?? prev.nationality ?? ''),
+                  dob: String(data.dob ?? prev.dob ?? ''),
+                  passportExpiryDate: String(data.passportexpirydate ?? prev.passportExpiryDate ?? ''),
+                  mobileNo: String(data.mobile_no ?? prev.mobileNo ?? ''),
+                  email: String(data.email ?? prev.email ?? ''),
+                  occupation: String(data.occupation ?? prev.occupation ?? ''),
+                  religionDen: String(data.religion_den ?? prev.religionDen ?? ''),
+                }));
+              }}
+            />
           </div>
-        )}
+          <div className="permit-card">
+            <Form onSubmit={handleSubmit}>
+
+            {submitSuccess && (
+              <div style={{ padding: '1rem', backgroundColor: '#d4edda', color: '#155724', marginBottom: '1rem', borderRadius: '4px' }}>
+                {l.submitSuccess}
+              </div>
+            )}
+            {submitError && (
+              <div style={{ padding: '1rem', backgroundColor: '#f8d7da', color: '#721c24', marginBottom: '1rem', borderRadius: '4px' }}>
+                {l.submitError}
+              </div>
+            )}
 
         <fieldset>
           <legend>{l.companyPermitInfo}</legend>
@@ -719,14 +788,15 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
           </button>
         </div>
             </Form>
-          <SubmitChoiceModal
-            open={showSubmitChoice}
-            onCancel={() => {
-              setShowSubmitChoice(false);
-              setIsDraftChoice(null);
-            }}
-            onChoose={handleChoice}
-          />
+            <SubmitChoiceModal
+              open={showSubmitChoice}
+              onCancel={() => {
+                setShowSubmitChoice(false);
+                setIsDraftChoice(null);
+              }}
+              onChoose={handleChoice}
+            />
+          </div>
         </div>
       </div>
     </main>

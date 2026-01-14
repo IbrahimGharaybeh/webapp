@@ -251,13 +251,25 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
     setSubmitError(false);
   };
 
+  const normalizePayload = (payload: typeof formData) => {
+    return Object.fromEntries(
+      Object.entries(payload).map(([key, value]) => {
+        if (typeof value === 'string' && value.trim() === '') {
+          return [key, null];
+        }
+        return [key, value];
+      })
+    ) as typeof formData;
+  };
+
   const submitPayload = async (payload: typeof formData, draftChoice: boolean | null) => {
     if (draftChoice === null) return;
     try {
       setLoading(true);
       setSubmitSuccess(false);
       setSubmitError(false);
-      console.log('Submitting photography form payload:', payload);
+      const normalizedPayload = normalizePayload(payload);
+      console.log('Submitting photography form payload:', normalizedPayload);
       const response = await fetch(`${API_URL}/api/data/photography`, {
         method: 'POST',
         headers: {
@@ -265,8 +277,8 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
         },
         credentials: 'include',
         body: JSON.stringify({
-          ...payload,
-          companyId: payload.companyName,
+          ...normalizedPayload,
+          companyId: normalizedPayload.companyName,
           isDraft: draftChoice
         }),
       });

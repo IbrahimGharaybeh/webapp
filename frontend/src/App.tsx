@@ -15,6 +15,7 @@ import ResetPasswordForm from './components/ResetPasswordForm';
 import UserControls from './pages/UserControls';
 import MemberControlPage from './pages/MemberControl';
 import MakeCompany from './pages/MakeCompany';
+import RegisteredPeople from './pages/RegisteredPeople';
 import { AuthProvider } from './lib/AuthContext';
 import { ProtectedRoute } from './lib/ProtectedRoutes';
 
@@ -54,6 +55,9 @@ function App() {
         } />
         <Route path="/make-company" element={
           <ProtectedRoute><MakeCompany /></ProtectedRoute>
+        } />
+        <Route path="/registered-people" element={
+          <ProtectedRoute><RegisteredPeople /></ProtectedRoute>
         } />
       </Routes>
     </AuthProvider>

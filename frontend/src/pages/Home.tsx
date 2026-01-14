@@ -70,6 +70,7 @@ function Home() {
     { text: 'Vehicle Permit', route: '/vehicle' },
     { text: 'Ship Permit', route: '/ship' },
     { text: 'Photography Permit', route: '/photography' },
+    { text: 'Registered People', route: '/registered-people' },
     { text: 'Dashboard', route: '/dashboard' }
   ];
 

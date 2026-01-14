@@ -524,6 +524,74 @@ export default function(pool) {
     }
   });
 
+  router.post('/people', requireAuth, async (req, res) => {
+    const client = await pool.connect();
+
+    try {
+      const userId = req.user.id;
+
+      await client.query('BEGIN');
+
+      const insertResult = await client.query(
+        `INSERT INTO people (
+          rep, company, name_arabic, passport_no, full_residence_no,
+          emirates_id_no, nationality, dob, passportexpirydate,
+          mobile_no, email, occupation, religion_den
+        ) VALUES (
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
+        )
+        RETURNING *`,
+        [
+          userId,
+          req.body.companyId ?? null,
+          req.body.nameArabic,
+          req.body.passportNo,
+          req.body.fullResidenceNo,
+          req.body.emiratesIdNo,
+          req.body.nationality,
+          req.body.dob,
+          req.body.passportExpiryDate,
+          req.body.mobileNo,
+          req.body.email,
+          req.body.occupation,
+          req.body.religionDen
+        ]
+      );
+
+      await client.query('COMMIT');
+
+      res.status(201).json({ success: true, message: "saved to database", data: insertResult.rows[0] });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error("Error in /api/data/people:", error);
+      console.error("Request body:", req.body);
+      res.status(500).json({ success: false, error: error.message });
+    } finally {
+      client.release();
+    }
+  });
+
+  router.get('/people', requireAuth, async (req, res) => {
+    const client = await pool.connect();
+
+    try {
+      const userId = req.user.id;
+      const result = await client.query(
+        `SELECT *
+         FROM people
+         WHERE rep = $1
+         ORDER BY created_at DESC`,
+        [userId]
+      );
+      res.status(200).json({ success: true, data: result.rows });
+    } catch (error) {
+      console.error('Error in /api/data/people:', error);
+      res.status(500).json({ success: false, error: error.message });
+    } finally {
+      client.release();
+    }
+  });
+
   router.post('/photography', requireAuth, async (req, res) => {
     const client = await pool.connect();
     

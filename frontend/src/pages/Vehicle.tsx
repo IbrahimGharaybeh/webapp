@@ -286,13 +286,25 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
     setSubmitError(false);
   };
 
+  const normalizePayload = (payload: typeof formData) => {
+    return Object.fromEntries(
+      Object.entries(payload).map(([key, value]) => {
+        if (typeof value === 'string' && value.trim() === '') {
+          return [key, null];
+        }
+        return [key, value];
+      })
+    ) as typeof formData;
+  };
+
   const submitPayload = async (payload: typeof formData, draftChoice: boolean | null) => {
     if (draftChoice === null) return;
     try {
       setLoading(true);
       setSubmitSuccess(false);
       setSubmitError(false);
-      console.log('Submitting vehicle form payload:', payload);
+      const normalizedPayload = normalizePayload(payload);
+      console.log('Submitting vehicle form payload:', normalizedPayload);
       const response = await fetch(`${API_URL}/api/data/vehicle`, {
         method: 'POST',
         headers: {
@@ -300,8 +312,8 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
         },
         credentials: 'include',
         body: JSON.stringify({
-          ...payload,
-          companyId: payload.companyName,
+          ...normalizedPayload,
+          companyId: normalizedPayload.companyName,
           isDraft: draftChoice
         }),
       });
