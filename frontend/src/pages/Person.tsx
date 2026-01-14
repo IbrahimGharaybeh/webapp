@@ -520,6 +520,8 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
             <SearchList
               fetchUrl={peopleUrl}
               rowField="name_arabic"
+              filterField="company"
+              filterValue={formData.companyName}
               onSelect={(item) => {
                 const data = item.data ?? {};
                 setFormData((prev) => ({

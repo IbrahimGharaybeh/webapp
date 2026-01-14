@@ -8,6 +8,8 @@ type SearchListProps = {
   idField?: string;
   placeholder?: string;
   emptyText?: string;
+  filterField?: string;
+  filterValue?: string;
   onSelect?: (item: SearchListItem) => void;
 };
 
@@ -61,6 +63,8 @@ function SearchList({
   idField = 'id',
   placeholder = 'Search...',
   emptyText = 'No results found.',
+  filterField,
+  filterValue,
   onSelect,
 }: SearchListProps) {
   const [query, setQuery] = useState('');
@@ -128,10 +132,16 @@ function SearchList({
 
   const filteredRows = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
-    const sourceRows = resolvedItems;
+    let sourceRows = resolvedItems;
+    if (filterField && filterValue) {
+      sourceRows = sourceRows.filter((row) => {
+        const data = row.data ?? {};
+        return String((data as Record<string, unknown>)[filterField] ?? '') === filterValue;
+      });
+    }
     if (!trimmed) return sourceRows;
     return sourceRows.filter((row) => row.label.toLowerCase().includes(trimmed));
-  }, [query, resolvedItems]);
+  }, [query, resolvedItems, filterField, filterValue]);
 
   return (
     <div style={containerStyle}>
