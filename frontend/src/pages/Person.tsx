@@ -10,6 +10,7 @@ import { TableDropDown } from '../components/DropDownComplicated/TableDropDown';
 import SubmitChoiceModal from '../components/SubmitChoiceModal';
 import SidebarMenu from '../components/Dashboard/SidebarMenu';
 import SearchList from '../components/SearchList/SearchList';
+import ContractLocationRow from '../components/ContractLocationRow/ContractLocationRow';
 
 interface Company {
   company: string;
@@ -326,12 +327,6 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleLocationChange = (index: number, field: string, value: string) => {
-    const newLocations = [...formData.permittedLocations];
-    newLocations[index] = { ...newLocations[index], [field]: value };
-    setFormData(prev => ({ ...prev, permittedLocations: newLocations }));
-  };
-
   const handleClear = () => {
     setFormData({
       companyName: '',
@@ -516,7 +511,11 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
 
         <div style={layoutStyle}>
           <div style={sidebarColumnStyle}>
-            <SidebarMenu activeKey="profile" onSelect={() => {}} />
+            <SidebarMenu
+              activeKey="permit"
+              onSelect={() => {}}
+              items={[{ key: 'permit', label: 'Permit' }]}
+            />
             <SearchList
               fetchUrl={peopleUrl}
               rowField="name_arabic"
@@ -756,20 +755,21 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
             <div>{l.permittedLocations.contractNo}</div>
             <div>{l.permittedLocations.contractLocationsNo}</div>
             <div>{l.permittedLocations.contractLocationsDesc}</div>
+            <div>Start Date</div>
+            <div>End Date</div>
           </div>
           {formData.permittedLocations.map((location, index) => (
             <div key={index}>
-              <Input
-                value={location.contractNo}
-                onChange={(e) => handleLocationChange(index, 'contractNo', e.target.value)}
-              />
-              <Input
-                value={location.contractLocationsNo}
-                onChange={(e) => handleLocationChange(index, 'contractLocationsNo', e.target.value)}
-              />
-              <Input
-                value={location.contractLocationsDesc}
-                onChange={(e) => handleLocationChange(index, 'contractLocationsDesc', e.target.value)}
+              <ContractLocationRow
+                apiUrl={API_URL}
+                value={location}
+                onChange={(next) => {
+                  setFormData((prev) => {
+                    const updated = [...prev.permittedLocations];
+                    updated[index] = next;
+                    return { ...prev, permittedLocations: updated };
+                  });
+                }}
               />
             </div>
           ))}

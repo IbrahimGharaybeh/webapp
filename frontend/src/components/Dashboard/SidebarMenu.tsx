@@ -2,9 +2,15 @@ import type { CSSProperties } from 'react';
 
 export type DashboardViewKey = 'profile' | 'companies' | 'history';
 
+export type SidebarMenuItem = {
+  key: string;
+  label: string;
+};
+
 type SidebarMenuProps = {
-  activeKey: DashboardViewKey;
-  onSelect: (key: DashboardViewKey) => void;
+  activeKey: string;
+  onSelect: (key: string) => void;
+  items?: SidebarMenuItem[];
 };
 
 const menuContainerStyle: CSSProperties = {
@@ -47,17 +53,17 @@ const activeMenuButtonStyle: CSSProperties = {
   boxShadow: '0 10px 24px rgba(0,0,0,0.3)',
 };
 
-const menuItems: Array<{ key: DashboardViewKey; label: string }> = [
+const defaultMenuItems: SidebarMenuItem[] = [
   { key: 'profile', label: 'Profile' },
   { key: 'companies', label: 'Companies' },
   { key: 'history', label: 'History' },
 ];
 
-function SidebarMenu({ activeKey, onSelect }: SidebarMenuProps) {
+function SidebarMenu({ activeKey, onSelect, items = defaultMenuItems }: SidebarMenuProps) {
   return (
     <aside style={menuContainerStyle}>
       <p style={menuHeaderStyle}>Menu</p>
-      {menuItems.map((item) => (
+      {items.map((item) => (
         <button
           key={item.key}
           type="button"

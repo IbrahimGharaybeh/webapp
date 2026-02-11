@@ -16,6 +16,7 @@ import UserControls from './pages/UserControls';
 import MemberControlPage from './pages/MemberControl';
 import MakeCompany from './pages/MakeCompany';
 import RegisteredPeople from './pages/RegisteredPeople';
+import Mission from './pages/Mission';
 import { AuthProvider } from './lib/AuthContext';
 import { ProtectedRoute } from './lib/ProtectedRoutes';
 
@@ -58,6 +59,9 @@ function App() {
         } />
         <Route path="/registered-people" element={
           <ProtectedRoute><RegisteredPeople /></ProtectedRoute>
+        } />
+        <Route path="/mission" element={
+          <ProtectedRoute><Mission /></ProtectedRoute>
         } />
       </Routes>
     </AuthProvider>

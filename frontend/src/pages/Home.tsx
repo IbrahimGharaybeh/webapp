@@ -71,6 +71,7 @@ function Home() {
     { text: 'Ship Permit', route: '/ship' },
     { text: 'Photography Permit', route: '/photography' },
     { text: 'Registered People', route: '/registered-people' },
+    { text: 'Registered Mission', route: '/mission' },
     { text: 'Dashboard', route: '/dashboard' }
   ];
 

@@ -5,6 +5,7 @@ import { PersonFormFiller } from '../form/PersonFormFiller.js';
 import { VehicleFormFiller } from '../form/VehicleFormFiller.js';
 import { PhotographyFormFiller } from '../form/PhotographyFormFiller.js';
 import { ShipFormFiller } from '../form/ShipFormFiller.js';
+import { getContractLocationByContractNo } from '../functions/contractLocationLookup.js';
 
 async function insertPersonPermit(client, userId, body) {
   const companyResult = await client.query(
@@ -586,6 +587,64 @@ export default function(pool) {
       res.status(200).json({ success: true, data: result.rows });
     } catch (error) {
       console.error('Error in /api/data/people:', error);
+      res.status(500).json({ success: false, error: error.message });
+    } finally {
+      client.release();
+    }
+  });
+
+  router.get('/contract-location/:contractNo', requireAuth, async (req, res) => {
+    try {
+      const contractNo = req.params.contractNo;
+      if (!contractNo) {
+        return res.status(400).json({ success: false, error: 'Contract number is required' });
+      }
+
+      const repId = req.user.id;
+      const row = await getContractLocationByContractNo(pool, repId, contractNo);
+      if (!row) {
+        return res.status(404).json({ success: false, error: 'Contract not found' });
+      }
+
+      return res.status(200).json({ success: true, data: row });
+    } catch (error) {
+      console.error('Error in /api/data/contract-location/:contractNo:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/mission', requireAuth, async (req, res) => {
+    const client = await pool.connect();
+
+    try {
+      const userId = req.user.id;
+      const rawPeople = Array.isArray(req.body.people) ? req.body.people : [];
+      const people = rawPeople
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value));
+
+      const insertResult = await client.query(
+        `INSERT INTO missions (
+          rep, location, contract_no, description, start_date, end_date, people
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7
+        )
+        RETURNING *`,
+        [
+          userId,
+          req.body.location ?? null,
+          req.body.contractNo ? Number(req.body.contractNo) : null,
+          req.body.description ?? null,
+          req.body.startDate ?? null,
+          req.body.endDate ?? null,
+          people
+        ]
+      );
+
+      res.status(201).json({ success: true, message: 'saved to database', data: insertResult.rows[0] });
+    } catch (error) {
+      console.error('Error in /api/data/mission:', error);
+      console.error('Request body:', req.body);
       res.status(500).json({ success: false, error: error.message });
     } finally {
       client.release();
