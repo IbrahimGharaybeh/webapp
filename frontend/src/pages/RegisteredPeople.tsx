@@ -6,13 +6,12 @@ import Input from '../components/Input/Input';
 import Dropdown from '../components/Dropdown/Dropdown';
 import { TableDropDown } from '../components/DropDownComplicated/TableDropDown';
 import { useAuth } from '../lib/AuthContext';
+import { getApiUrl } from '../lib/api';
 
 interface Company {
   company: string;
   name: string;
 }
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
 
 function RegisteredPeople() {
   const { user } = useAuth();
@@ -42,11 +41,11 @@ function RegisteredPeople() {
         return;
       }
       try {
-        const response = await fetch(`${API_URL}/api/members/companyCheck`, {
+        const response = await fetch(getApiUrl('/api/members/companyCheck'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ userId: user.id })
+          body: JSON.stringify({})
         });
         if (!response.ok) throw new Error('Failed to fetch companies');
         const data = await response.json();
@@ -72,17 +71,16 @@ function RegisteredPeople() {
     const payload = {
       ...formData,
       companyId: formData.companyName,
-      userId: user?.id ?? null,
     };
     void submitPayload(payload);
   };
 
-  const submitPayload = async (payload: typeof formData & { companyId: string; userId: string | null }) => {
+  const submitPayload = async (payload: typeof formData & { companyId: string }) => {
     try {
       setLoading(true);
       setSubmitSuccess(false);
       setSubmitError(false);
-      const response = await fetch(`${API_URL}/api/data/people`, {
+      const response = await fetch(getApiUrl('/api/data/people'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getApiUrl } from '../../lib/api';
 
 type ContractLocationValue = {
   contractNo: string;
@@ -9,10 +10,9 @@ type ContractLocationValue = {
 type ContractLocationRowProps = {
   value: ContractLocationValue;
   onChange: (next: ContractLocationValue) => void;
-  apiUrl: string;
 };
 
-function ContractLocationRow({ value, onChange, apiUrl }: ContractLocationRowProps) {
+function ContractLocationRow({ value, onChange }: ContractLocationRowProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -42,7 +42,7 @@ function ContractLocationRow({ value, onChange, apiUrl }: ContractLocationRowPro
       setLoading(true);
       setError('');
       const response = await fetch(
-        `${apiUrl}/api/data/contract-location/${encodeURIComponent(contractNo)}`,
+        getApiUrl(`/api/data/contract-location/${encodeURIComponent(contractNo)}`),
         {
           method: 'GET',
           credentials: 'include'

@@ -3,10 +3,11 @@ import { PersonFormFiller } from '../form/PersonFormFiller.js';
 import { VehicleFormFiller } from '../form/VehicleFormFiller.js';
 import { ShipFormFiller } from '../form/ShipFormFiller.js';
 import { PhotographyFormFiller } from '../form/PhotographyFormFiller.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
-router.post('/person', async (req, res) => {
+router.post('/person', requireAuth, async (req, res) => {
   try {
     const pdfBytes = await PersonFormFiller(req.body);
     res.setHeader("Content-Type", "application/pdf");
@@ -18,7 +19,7 @@ router.post('/person', async (req, res) => {
   }
 });
 
-router.post('/vehicle', async (req, res) => {
+router.post('/vehicle', requireAuth, async (req, res) => {
   try {
     const pdfBytes = await VehicleFormFiller(req.body);
     res.setHeader("Content-Type", "application/pdf");
@@ -30,7 +31,7 @@ router.post('/vehicle', async (req, res) => {
   }
 });
 
-router.post('/ship', async (req, res) => {
+router.post('/ship', requireAuth, async (req, res) => {
   try {
     const pdfBytes = await ShipFormFiller(req.body);
     res.setHeader("Content-Type", "application/pdf");
@@ -42,7 +43,7 @@ router.post('/ship', async (req, res) => {
   }
 });
 
-router.post('/photography', async (req, res) => {
+router.post('/photography', requireAuth, async (req, res) => {
   try {
     const pdfBytes = await PhotographyFormFiller(req.body);
     res.setHeader("Content-Type", "application/pdf");

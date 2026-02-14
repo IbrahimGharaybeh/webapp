@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { randomUUID } from 'crypto';
 import { getRepresentativeName } from '../functions/representativeLookup.js';
+import { requireAuth } from '../middleware/auth.js';
 
 export default function(pool) {
   const router = Router();
@@ -25,10 +25,9 @@ export default function(pool) {
     }
   });
 
-  router.post('/signup', async (req, res) => {
-        const { id, email, username, name } = req.body;
-        console.log('Received ID:', id);  // Add this
-        console.log('ID type:', typeof id);  // Add this
+  router.post('/signup', requireAuth, async (req, res) => {
+        const { email, username, name } = req.body;
+        const id = req.user.id;
         try {
             await pool.query(
             'INSERT INTO users (id, email, username, name) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING',
@@ -41,7 +40,7 @@ export default function(pool) {
         }
         });
 
-  router.post('/representative-name', async (req, res) => {
+  router.post('/representative-name', requireAuth, async (req, res) => {
     try {
       const repId = req.body.repId;
       console.log('[representative-name] request', { repId });

@@ -38,7 +38,7 @@ function PermitDetails() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ adminId: user.id, permitId: numericPermitId })
+          body: JSON.stringify({ permitId: numericPermitId })
         });
 
         if (!response.ok) {

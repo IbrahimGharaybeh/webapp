@@ -4,8 +4,7 @@ import Form from '../components/Form/Form';
 import DatePicker from '../components/DatePicker/DatePicker';
 import Input from '../components/Input/Input';
 import SearchList, { type SearchListItem } from '../components/SearchList/SearchList';
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
+import { getApiUrl } from '../lib/api';
 
 function Mission() {
   const [loading, setLoading] = useState(false);
@@ -35,7 +34,7 @@ function Mission() {
     [selectedPeople]
   );
 
-  const peopleUrl = `${API_URL}/api/data/people`;
+  const peopleUrl = getApiUrl('/api/data/people');
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -77,7 +76,7 @@ function Mission() {
       setSubmitSuccess(false);
       setSubmitError(false);
 
-      const response = await fetch(`${API_URL}/api/data/mission`, {
+      const response = await fetch(getApiUrl('/api/data/mission'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

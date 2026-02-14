@@ -3,12 +3,12 @@ import { deleteUserById } from '../functions/devUserControls.js';
 
 const router = Router();
 
-router.post('/delete-user', async (req, res) => {
+router.post('/delete-user/:userId', async (req, res) => {
   if (process.env.NODE_ENV === 'production') {
     return res.status(403).json({ error: 'Not allowed in production' });
   }
 
-  const { userId } = req.body;
+  const { userId } = req.params;
   if (!userId) {
     return res.status(400).json({ error: 'userId is required' });
   }

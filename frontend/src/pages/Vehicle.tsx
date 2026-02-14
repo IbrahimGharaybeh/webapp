@@ -8,6 +8,7 @@ import Dropdown from '../components/Dropdown/Dropdown';
 import DatePicker from '../components/DatePicker/DatePicker';
 import Input from '../components/Input/Input';
 import Textarea from '../components/Textarea/Textarea';
+import { getApiUrl } from '../lib/api';
 
 interface Company {
   company: string;
@@ -23,8 +24,6 @@ interface PermittedLocation {
 interface VehicleProps {
   initialLanguage?: 'en' | 'ar';
 }
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
 
 function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
   const { user } = useAuth();
@@ -97,7 +96,6 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
       passportNo: 'Passport No.',
       fullResidenceNo: 'Full Residence No.',
       occupation: 'Occupation',
-      emiratesIdNo: 'Emirates ID No.',
       emiratesIdNo: 'Emirates ID No.',
       personPrmNo: 'Person Prm. No.',
       mobileNo: 'Mobile No.',
@@ -206,11 +204,11 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
       }
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/api/members/companyCheck`, {
+        const response = await fetch(getApiUrl('/api/members/companyCheck'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ userId: user.id })
+          body: JSON.stringify({})
         });
         if (!response.ok) throw new Error('Failed to fetch companies');
         const data = await response.json();
@@ -305,7 +303,7 @@ function Vehicle({ initialLanguage = 'en' }: VehicleProps) {
       setSubmitError(false);
       const normalizedPayload = normalizePayload(payload);
       console.log('Submitting vehicle form payload:', normalizedPayload);
-      const response = await fetch(`${API_URL}/api/data/vehicle`, {
+      const response = await fetch(getApiUrl('/api/data/vehicle'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

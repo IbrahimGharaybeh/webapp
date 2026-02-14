@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { signUp } from '../../lib/auth';
+import { getApiUrl } from '../../lib/api';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -17,9 +18,10 @@ export default function Signup() {
     setError('');
 
     // Check if username/email available first
-    const checkRes = await fetch('http://localhost:5000/api/users/check', {
+    const checkRes = await fetch(getApiUrl('/api/users/check'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ username, email })
     });
     const checkData = await checkRes.json();
@@ -36,11 +38,11 @@ export default function Signup() {
     }
 
     // Sync to local users table
-    await fetch('http://localhost:5000/api/users/signup', {
+    await fetch(getApiUrl('/api/users/signup'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
-        id: data.user.id,
         email,
         username,
         name,

@@ -3,7 +3,6 @@ import { pool } from "../utils/db.js"; //always make sure pool is imported, wast
 //checks all companies the user is a part of
 export async function checkCompanies(userId) {
     try {
-    console.log('userid recieved: ', userId);
     const result = await pool.query(
         `select cr.company, c.name
          from company_rep cr
@@ -11,7 +10,6 @@ export async function checkCompanies(userId) {
          where cr.rep=$1`,
         [userId]
     )
-    console.log("THE RESULT: ", result);
     return result.rows;
 } catch (err) {
     throw err;

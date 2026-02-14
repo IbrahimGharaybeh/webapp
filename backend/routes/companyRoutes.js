@@ -3,6 +3,7 @@ import { checkCompanies, checkCompaniesAdmin } from '../functions/checkCompanies
 import { makeCompany } from '../functions/makeCompany.js';
 import { inviteMember, removeMember, makeAdmin } from '../functions/companyMemberControls.js';
 import { checkAdmin } from '../functions/checkAdmin.js';
+import { requireAuth } from '../middleware/auth.js';
 import {
   getPersonPermitIdsByCompany,
   getVehiclePermitIdsByCompany,
@@ -19,9 +20,9 @@ const isUuid = (value) => typeof value === 'string' && /^[0-9a-fA-F-]{36}$/.test
 export default function companyRoutes() {
   const router = Router();
 
-  router.post('/makeCompany', async (req, res) => {
+  router.post('/makeCompany', requireAuth, async (req, res) => {
     try {
-      const userId = req.body.userId;
+      const userId = req.user.id;
       const name = req.body.name;
       const code = req.body.code;
       const rows = await makeCompany(userId, name, code);
@@ -32,11 +33,9 @@ export default function companyRoutes() {
     }
   });
 
-  router.post('/companyCheck', async (req, res) => {
+  router.post('/companyCheck', requireAuth, async (req, res) => {
     try {
-      const userId = req.body.userId;
-      if (!userId) return res.status(400).json({ error: 'userId is required' });
-      if (!isUuid(userId)) return res.status(400).json({ error: 'userId must be a UUID' });
+      const userId = req.user.id;
       const rows = await checkCompanies(userId);
       res.json(rows);
     } catch (err) {
@@ -45,11 +44,9 @@ export default function companyRoutes() {
     }
   });
 
-  router.post('/companyCheckAdmin', async (req, res) => {
+  router.post('/companyCheckAdmin', requireAuth, async (req, res) => {
     try {
-      const userId = req.body.userId;
-      if (!userId) return res.status(400).json({ error: 'userId is required' });
-      if (!isUuid(userId)) return res.status(400).json({ error: 'userId must be a UUID' });
+      const userId = req.user.id;
       const rows = await checkCompaniesAdmin(userId);
       res.json(rows);
     } catch (err) {
@@ -58,15 +55,15 @@ export default function companyRoutes() {
     }
   });
 
-  router.post('/companyRepresentatives', async (req, res) => {
+  router.post('/companyRepresentatives', requireAuth, async (req, res) => {
     try {
-      const adminId = req.body.adminId;
+      const adminId = req.user.id;
       const companyId = req.body.companyId;
-      if (!adminId || !companyId) {
-        return res.status(400).json({ error: 'adminId and companyId are required' });
+      if (!companyId) {
+        return res.status(400).json({ error: 'companyId is required' });
       }
       if (![adminId, companyId].every(isUuid)) {
-        return res.status(400).json({ error: 'adminId and companyId must be UUIDs' });
+        return res.status(400).json({ error: 'companyId must be a UUID' });
       }
 
       const isAdmin = await checkAdmin(adminId, companyId);
@@ -90,15 +87,15 @@ export default function companyRoutes() {
     }
   });
 
-  router.post('/companyPermits', async (req, res) => {
+  router.post('/companyPermits', requireAuth, async (req, res) => {
     try {
-      const adminId = req.body.adminId;
+      const adminId = req.user.id;
       const companyId = req.body.companyId;
-      if (!adminId || !companyId) {
-        return res.status(400).json({ error: 'adminId and companyId are required' });
+      if (!companyId) {
+        return res.status(400).json({ error: 'companyId is required' });
       }
       if (![adminId, companyId].every(isUuid)) {
-        return res.status(400).json({ error: 'adminId and companyId must be UUIDs' });
+        return res.status(400).json({ error: 'companyId must be a UUID' });
       }
 
       const isAdmin = await checkAdmin(adminId, companyId);
@@ -143,15 +140,12 @@ export default function companyRoutes() {
     }
   });
 
-  router.post('/permitById', async (req, res) => {
+  router.post('/permitById', requireAuth, async (req, res) => {
     try {
-      const adminId = req.body.adminId;
+      const adminId = req.user.id;
       const permitId = Number(req.body.permitId);
-      if (!adminId || !Number.isInteger(permitId)) {
-        return res.status(400).json({ error: 'adminId and permitId are required' });
-      }
-      if (!isUuid(adminId)) {
-        return res.status(400).json({ error: 'adminId must be a UUID' });
+      if (!Number.isInteger(permitId)) {
+        return res.status(400).json({ error: 'permitId is required' });
       }
 
       const permitIndex = await getPermitIndexById(permitId);
@@ -179,16 +173,16 @@ export default function companyRoutes() {
     }
   });
 
-  router.post('/companyMemberControls/inviteMember', async (req, res) => {
+  router.post('/companyMemberControls/inviteMember', requireAuth, async (req, res) => {
     try {
-      const admin = req.body.admin;
+      const admin = req.user.id;
       const user = req.body.user;
       const company = req.body.company;
-      if (!admin || !user || !company) {
-        return res.status(400).json({ error: 'admin, user, and company are required' });
+      if (!user || !company) {
+        return res.status(400).json({ error: 'user and company are required' });
       }
       if (![admin, user, company].every(isUuid)) {
-        return res.status(400).json({ error: 'admin, user, and company must be UUIDs' });
+        return res.status(400).json({ error: 'user and company must be UUIDs' });
       }
       const rows = await inviteMember(user, admin, company);
       res.json(rows);
@@ -199,16 +193,16 @@ export default function companyRoutes() {
     }
   });
 
-  router.post('/companyMemberControls/removeMember', async (req, res) => {
+  router.post('/companyMemberControls/removeMember', requireAuth, async (req, res) => {
     try {
-      const admin = req.body.admin;
+      const admin = req.user.id;
       const user = req.body.user;
       const company = req.body.company;
-      if (!admin || !user || !company) {
-        return res.status(400).json({ error: 'admin, user, and company are required' });
+      if (!user || !company) {
+        return res.status(400).json({ error: 'user and company are required' });
       }
       if (![admin, user, company].every(isUuid)) {
-        return res.status(400).json({ error: 'admin, user, and company must be UUIDs' });
+        return res.status(400).json({ error: 'user and company must be UUIDs' });
       }
       const exclusion = await removeMember(user, admin, company);
       res.json(exclusion);
@@ -219,16 +213,16 @@ export default function companyRoutes() {
     }
   });
 
-  router.post('/companyMemberControls/makeAdmin', async (req, res) => {
+  router.post('/companyMemberControls/makeAdmin', requireAuth, async (req, res) => {
     try {
-      const admin = req.body.admin;
+      const admin = req.user.id;
       const user = req.body.user;
       const company = req.body.company;
-      if (!admin || !user || !company) {
-        return res.status(400).json({ error: 'admin, user, and company are required' });
+      if (!user || !company) {
+        return res.status(400).json({ error: 'user and company are required' });
       }
       if (![admin, user, company].every(isUuid)) {
-        return res.status(400).json({ error: 'admin, user, and company must be UUIDs' });
+        return res.status(400).json({ error: 'user and company must be UUIDs' });
       }
       const updated = await makeAdmin(user, admin, company);
       res.json({ updated });

@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { getCompanyName, verifyCompanyOwnership } from '../utils/db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { PersonFormFiller } from '../form/PersonFormFiller.js';
 import { VehicleFormFiller } from '../form/VehicleFormFiller.js';
@@ -43,7 +42,7 @@ async function insertPersonPermit(client, userId, body) {
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
     RETURNING *`,
     [
-      userId, companyName, body.representative, body.permitType,
+      userId, companyName, userId, body.permitType,
       body.transactionType, body.unifiedNo, body.nameArabic,
       body.nationality, body.religionDen, body.passportNo,
       body.passportExpiryDate, body.fullResidenceNo, body.occupation, body.emiratesIdNo,
@@ -107,7 +106,7 @@ async function insertVehiclePermit(client, userId, body) {
     )
     RETURNING *`,
     [
-      userId, companyName, body.representative, body.permitType,
+      userId, companyName, userId, body.permitType,
       body.transactionType, body.unifiedNo, body.nameArabic,
       body.nationality, body.religionDen, body.passportNo,
       body.fullResidenceNo, body.occupation, body.emiratesIdNo,
@@ -165,7 +164,7 @@ async function insertPhotographyPermit(client, userId, body) {
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
     RETURNING *`,
     [
-      userId, companyName, body.representative, body.permitType,
+      userId, companyName, userId, body.permitType,
       body.transactionType, body.unifiedNo, body.nameArabic,
       body.nationality, body.religionDen, body.passportNo,
       body.fullResidenceNo, body.occupation, body.emiratesIdNo,
@@ -205,7 +204,7 @@ async function insertShipPermit(client, userId, body) {
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
     RETURNING *`,
     [
-      userId, companyName, body.representative, body.permitType,
+      userId, companyName, userId, body.permitType,
       body.transactionType, body.shipPrmNo, body.shipNumber,
       body.shipName, body.crewCount, body.totalWeight,
       body.callSignChannel, body.navigLicValidity, body.shipsOwner,
@@ -645,59 +644,6 @@ export default function(pool) {
     } catch (error) {
       console.error('Error in /api/data/mission:', error);
       console.error('Request body:', req.body);
-      res.status(500).json({ success: false, error: error.message });
-    } finally {
-      client.release();
-    }
-  });
-
-  router.post('/photography', requireAuth, async (req, res) => {
-    const client = await pool.connect();
-    
-    try {
-      const userId = req.user.id;
-
-      const companyName = await getCompanyName(pool, req.body.companyId);
-      if (!companyName) {
-        return res.status(400).json({ error: 'Invalid company ID' });
-      }
-
-      await client.query('BEGIN');
-
-      const insertResult = await client.query(
-        `INSERT INTO photography_permits (
-          user_id, company_name, representative, permit_type, transaction_type,
-          unified_no, name_arabic, nationality, religion_den,
-          passport_no, full_residence_no, occupation, emirates_id_no,
-          mobile_no, permission_no, dob, expiry_date1, expiry_date2,
-          remarks, cameras, permitted_locations
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
-        RETURNING *`,
-        [
-          userId, companyName, req.body.representative, req.body.permitType,
-          req.body.transactionType, req.body.unifiedNo, req.body.nameArabic,
-          req.body.nationality, req.body.religionDen, req.body.passportNo,
-          req.body.fullResidenceNo, req.body.occupation, req.body.emiratesIdNo,
-          req.body.mobileNo, req.body.permissionNo, req.body.dob,
-          req.body.expiryDate1, req.body.expiryDate2, req.body.remarks,
-          JSON.stringify(req.body.cameras || []), JSON.stringify(req.body.permittedLocations || [])
-        ]
-      );
-
-      const permit = insertResult.rows[0];
-
-      await client.query(
-        `INSERT INTO permit_representative_index (permit_type, rep, company_id, permit_id, is_draft)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [4, userId, req.body.companyId, permit.id, req.body.isDraft]
-      );
-
-      await client.query('COMMIT');
-
-      res.status(201).json({ success: true, message: "saved to database", data: permit });
-    } catch (error) {
-      await client.query('ROLLBACK');
-      console.error("Error in /api/data/photography:", error);
       res.status(500).json({ success: false, error: error.message });
     } finally {
       client.release();

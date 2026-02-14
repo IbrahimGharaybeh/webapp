@@ -28,10 +28,10 @@ function Dashboard() {
 
   useEffect(() => {
     if (!user?.id) return;
-    void fetchCompanies(user.id);
+    void fetchCompanies();
   }, [user?.id]);
 
-  const fetchCompanies = async (userId: string) => {
+  const fetchCompanies = async () => {
     setCompanyLoading(true);
     setCompanyError(null);
     try {
@@ -40,13 +40,13 @@ function Dashboard() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ userId })
+          body: JSON.stringify({})
         }),
         fetch(getApiUrl('/api/members/companyCheck'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ userId })
+          body: JSON.stringify({})
         })
       ]);
 
@@ -76,11 +76,11 @@ function Dashboard() {
     if (!user?.id) return;
     adminCompanies.forEach((company) => {
       if (representativesByCompany[company.company]) return;
-      void fetchRepresentatives(company.company, user.id);
+      void fetchRepresentatives(company.company);
     });
   }, [adminCompanies, user?.id, representativesByCompany]);
 
-  const fetchRepresentatives = async (companyId: string, adminId: string) => {
+  const fetchRepresentatives = async (companyId: string) => {
     setRepresentativeLoading((prev) => ({ ...prev, [companyId]: true }));
     setRepresentativeErrors((prev) => ({ ...prev, [companyId]: '' }));
     try {
@@ -88,7 +88,7 @@ function Dashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ companyId, adminId })
+        body: JSON.stringify({ companyId })
       });
 
       if (!response.ok) {
@@ -112,7 +112,7 @@ function Dashboard() {
     }
   };
 
-  const fetchCompanyPermits = async (companyId: string, adminId: string) => {
+  const fetchCompanyPermits = async (companyId: string) => {
     setPermitLoading((prev) => ({ ...prev, [companyId]: true }));
     setPermitErrors((prev) => ({ ...prev, [companyId]: '' }));
     try {
@@ -120,7 +120,7 @@ function Dashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ companyId, adminId })
+        body: JSON.stringify({ companyId })
       });
 
       if (!response.ok) {
@@ -259,7 +259,7 @@ function Dashboard() {
       const hasPermits = Boolean(permitsByCompany[company.company]);
       const isPermitsLoading = Boolean(permitLoading[company.company]);
       if (!hasPermits && !isPermitsLoading) {
-        void fetchCompanyPermits(company.company, user.id);
+        void fetchCompanyPermits(company.company);
       }
     });
   }, [activeView, adminCompanies, permitsByCompany, permitLoading, user?.id]);
@@ -288,12 +288,11 @@ function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          admin: user.id,
           user: repId,
           company: companyId,
         }),
       });
-      void fetchRepresentatives(companyId, user.id);
+      void fetchRepresentatives(companyId);
     } catch (err) {
       console.error('Failed to remove member', err);
     }
@@ -307,12 +306,11 @@ function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          admin: user.id,
           user: repId,
           company: companyId,
         }),
       });
-      void fetchRepresentatives(companyId, user.id);
+      void fetchRepresentatives(companyId);
     } catch (err) {
       console.error('Failed to make admin', err);
     }

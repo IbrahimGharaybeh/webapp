@@ -13,6 +13,7 @@ import {
   ShipPortsDropDown,
   ShipTypesDropDown
 } from '../components/DropDownComplicated/ShipDropDowns';
+import { getApiUrl } from '../lib/api';
 
 interface Company {
   company: string;
@@ -33,8 +34,6 @@ interface PermittedLocation {
 interface ShipProps {
   initialLanguage?: 'en' | 'ar';
 }
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
 
 function Ship({ initialLanguage = 'en' }: ShipProps) {
   const { user } = useAuth();
@@ -174,11 +173,11 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
       }
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/api/members/companyCheck`, {
+        const response = await fetch(getApiUrl('/api/members/companyCheck'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ userId: user.id })
+          body: JSON.stringify({})
         });
         if (!response.ok) throw new Error('Failed to fetch companies');
         const data = await response.json();
@@ -266,7 +265,7 @@ function Ship({ initialLanguage = 'en' }: ShipProps) {
       setSubmitError(false);
       const normalizedPayload = normalizePayload(payload);
       console.log('Submitting ship form payload:', normalizedPayload);
-      const response = await fetch(`${API_URL}/api/data/ship`, {
+      const response = await fetch(getApiUrl('/api/data/ship'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

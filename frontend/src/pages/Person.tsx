@@ -11,16 +11,11 @@ import SubmitChoiceModal from '../components/SubmitChoiceModal';
 import SidebarMenu from '../components/Dashboard/SidebarMenu';
 import SearchList from '../components/SearchList/SearchList';
 import ContractLocationRow from '../components/ContractLocationRow/ContractLocationRow';
+import { getApiUrl } from '../lib/api';
 
 interface Company {
   company: string;
   name: string;
-}
-
-interface Religion {
-  religion_id: number;
-  religion_name_ar: string;
-  religion_name_en: string;
 }
 
 interface PermittedLocation {
@@ -33,16 +28,14 @@ interface PersonProps {
   initialLanguage?: 'en' | 'ar';
 }
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
-
 function Person({ initialLanguage = 'en' }: PersonProps) {
   const { user } = useAuth();
   const [language, setLanguage] = useState<'en' | 'ar'>(initialLanguage);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [religions, setReligions] = useState<Religion[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState(false);
+  const [submitErrorMessage, setSubmitErrorMessage] = useState('');
   const [showSubmitChoice, setShowSubmitChoice] = useState(false);
   const [isDraftChoice, setIsDraftChoice] = useState<boolean | null>(null);
 
@@ -279,11 +272,11 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
       }
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/api/members/companyCheck`, {
+        const response = await fetch(getApiUrl('/api/members/companyCheck'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ userId: user.id })
+          body: JSON.stringify({})
         });
         if (!response.ok) throw new Error('Failed to fetch companies');
         const data = await response.json();
@@ -302,25 +295,6 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
   useEffect(() => {
     setFormData(prev => ({ ...prev, representative: user?.id ?? '' }));
   }, [user]);
-  // Fetch religions on component mount
-  useEffect(() => {
-    const fetchReligions = async () => {
-      try {
-        setLoading(true);
-        // TODO: Replace with actual API endpoint
-        const response = await fetch('/api/religions');
-        const data = await response.json();
-        setReligions(data);
-      } catch (error) {
-        console.error('Error fetching religions:', error);
-        setReligions([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReligions();
-  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -362,6 +336,7 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
     });
     setSubmitSuccess(false);
     setSubmitError(false);
+    setSubmitErrorMessage('');
   };
 
   const normalizePayload = (payload: typeof formData) => {
@@ -381,11 +356,12 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
       setLoading(true);
       setSubmitSuccess(false);
       setSubmitError(false);
+      setSubmitErrorMessage('');
       const normalizedPayload = normalizePayload(payload);
       console.log('Submitting person form payload:', normalizedPayload);
       
       // TODO: Replace with actual API endpoint
-      const response = await fetch(`${API_URL}/api/data/person`, {
+      const response = await fetch(getApiUrl('/api/data/person'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -399,8 +375,18 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Submission failed');
+        let backendMessage = '';
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const errorJson = await response.json();
+          backendMessage =
+            errorJson?.error ||
+            errorJson?.message ||
+            (typeof errorJson === 'string' ? errorJson : '');
+        } else {
+          backendMessage = await response.text();
+        }
+        throw new Error(backendMessage || `Submission failed (${response.status})`);
       }
 
       if (!draftChoice) {
@@ -417,6 +403,7 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
     } catch (error) {
       console.error('Error submitting form:', error);
       setSubmitError(true);
+      setSubmitErrorMessage(error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
@@ -427,6 +414,7 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
     if (!formData.companyName || !formData.permitType || !formData.transactionType) {
       setSubmitSuccess(false);
       setSubmitError(true);
+      setSubmitErrorMessage('Company, permit type, and transaction type are required.');
       return;
     }
     setIsDraftChoice(null);
@@ -497,7 +485,7 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
     setLanguage(prev => prev === 'en' ? 'ar' : 'en');
   };
 
-  const peopleUrl = `${API_URL}/api/data/people`;
+  const peopleUrl = getApiUrl('/api/data/people');
 
   return (
     <main className="permit-page">
@@ -551,7 +539,7 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
             )}
             {submitError && (
               <div style={{ padding: '1rem', backgroundColor: '#f8d7da', color: '#721c24', marginBottom: '1rem', borderRadius: '4px' }}>
-                {l.submitError}
+                {submitErrorMessage || l.submitError}
               </div>
             )}
 
@@ -761,7 +749,6 @@ function Person({ initialLanguage = 'en' }: PersonProps) {
           {formData.permittedLocations.map((location, index) => (
             <div key={index}>
               <ContractLocationRow
-                apiUrl={API_URL}
                 value={location}
                 onChange={(next) => {
                   setFormData((prev) => {

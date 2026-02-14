@@ -18,11 +18,9 @@ export default function UserControls() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/dev/delete-user`, {
+      const response = await fetch(`${API_URL}/api/dev/delete-user/${encodeURIComponent(userId)}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ userId })
+        credentials: 'include'
       });
 
       const data = await response.json();

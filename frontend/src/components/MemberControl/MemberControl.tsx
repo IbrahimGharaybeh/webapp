@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '../../lib/AuthContext';
+import { getApiUrl } from '../../lib/api';
 
 type Company = {
   company: string;
@@ -9,9 +10,7 @@ type MemberControlProps = {
   apiBase?: string;
 };
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
-
-function MemberControl({ apiBase = `${API_URL}/api/members` }: MemberControlProps) {
+function MemberControl({ apiBase = getApiUrl('/api/members') }: MemberControlProps) {
   const { user, loading: authLoading, refetch } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState('');
@@ -24,25 +23,25 @@ function MemberControl({ apiBase = `${API_URL}/api/members` }: MemberControlProp
       setStatus('You must be logged in to manage members.');
       return;
     }
-    if (action === 'remove' && targetUserId === user.id) {
+    if (action === 'remove' && user && targetUserId === user.id) {
       setStatus('You cannot remove yourself.');
       return;
     }
     if (!user) return;
-    fetchCompanies(user.id);
+    fetchCompanies();
   }, [user, authLoading]);
 
   console.log('logged-in user:', user);
 
 
-  const fetchCompanies = async (userId: string) => {
+  const fetchCompanies = async () => {
     try {
       setStatus('Loading companies...');
       const res = await fetch(`${apiBase}/companyCheckAdmin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({}),
       });
       if (!res.ok) throw new Error('Failed to load companies');
       const data = await res.json();
@@ -76,7 +75,6 @@ function MemberControl({ apiBase = `${API_URL}/api/members` }: MemberControlProp
         : `${apiBase}/companyMemberControls/removeMember`;
 
     const payload = {
-      admin: user.id,
       company: selectedCompany,
       user: targetUserId,
     };

@@ -8,6 +8,7 @@ import Dropdown from '../components/Dropdown/Dropdown';
 import DatePicker from '../components/DatePicker/DatePicker';
 import Input from '../components/Input/Input';
 import Textarea from '../components/Textarea/Textarea';
+import { getApiUrl } from '../lib/api';
 
 interface Company {
   company: string;
@@ -28,8 +29,6 @@ interface PermittedLocation {
 interface PhotographyProps {
   initialLanguage?: 'en' | 'ar';
 }
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
 
 function Photography({ initialLanguage = 'en' }: PhotographyProps) {
   const { user } = useAuth();
@@ -176,11 +175,11 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
       }
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/api/members/companyCheck`, {
+        const response = await fetch(getApiUrl('/api/members/companyCheck'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ userId: user.id })
+          body: JSON.stringify({})
         });
         if (!response.ok) throw new Error('Failed to fetch companies');
         const data = await response.json();
@@ -270,7 +269,7 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
       setSubmitError(false);
       const normalizedPayload = normalizePayload(payload);
       console.log('Submitting photography form payload:', normalizedPayload);
-      const response = await fetch(`${API_URL}/api/data/photography`, {
+      const response = await fetch(getApiUrl('/api/data/photography'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

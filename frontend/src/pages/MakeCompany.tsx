@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
+import { getApiUrl } from '../lib/api';
 
 function MakeCompany() {
   const { user } = useAuth();
@@ -28,11 +27,11 @@ function MakeCompany() {
     try {
       setLoading(true);
       setStatus(null);
-      const res = await fetch(`${API_URL}/api/members/makeCompany`, {
+      const res = await fetch(getApiUrl('/api/members/makeCompany'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ userId: user.id, name, code }),
+        body: JSON.stringify({ name, code }),
       });
       if (!res.ok) {
         const text = await res.text();
