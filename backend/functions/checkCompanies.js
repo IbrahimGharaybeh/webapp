@@ -26,3 +26,15 @@ export async function checkCompaniesAdmin(userId) {
     )
     return result.rows;
 }
+
+//returns true if user belongs to the company, false otherwise
+export async function isUserInCompany(userId, companyId) {
+    const result = await pool.query(
+        `select 1
+         from company_rep
+         where rep = $1 and company = $2
+         limit 1`,
+        [userId, companyId]
+    );
+    return result.rowCount > 0;
+}

@@ -10,6 +10,7 @@ import { limiter, authLimiter } from './utils/ratelimiter.js';
 import helmet from 'helmet';
 import userRoutes from './routes/users.js';
 import devRoutes from './routes/dev.js';
+import externalRoutes from './routes/external.js';
 
 dotenv.config();
 
@@ -33,10 +34,12 @@ app.use(helmet());
 app.get('/', (req, res) => res.json({ message: 'API running' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/fill', fillRoutes);
-app.use('/api/data', dataRoutes(pool));  // No supabase
+const dataRouter = dataRoutes(pool);
+app.use('/api/data', dataRouter);  // No supabase
 app.use('/api/members/', companyRoutes());
 app.use('/api/users', userRoutes(pool));
 app.use('/api/dev', devRoutes);
+app.use('/api/external', externalRoutes(dataRouter));
 
 const PORT = Number(process.env.PORT) || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
