@@ -23,3 +23,20 @@ export const authLimiter = rateLimit({
     res.status(429).json({ error: 'Too many login attempts, try again later' });
   }
 });
+
+// Stricter limiter for external token lifecycle endpoints
+export const externalTokenLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 6,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    console.warn('[externalTokenLimiter] blocked request', {
+      ip: req.ip,
+      path: req.originalUrl,
+      method: req.method
+    });
+    res.status(429).json({ error: 'Too many external token attempts, try again later' });
+  }
+});

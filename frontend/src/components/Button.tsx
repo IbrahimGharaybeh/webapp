@@ -5,11 +5,12 @@ interface ButtonProps {
   onClick?: () => void;
   route?: string;
   style?: React.CSSProperties;
+  className?: string;
 }
 
-function Button({ text, onClick, route, style }: ButtonProps) {
+function Button({ text, onClick, route, style, className }: ButtonProps) {
   const content = (
-    <button onClick={onClick} style={style}>
+    <button onClick={onClick} style={style} className={className}>
       {text}
     </button>
   );

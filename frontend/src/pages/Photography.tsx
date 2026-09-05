@@ -608,3 +608,4 @@ function Photography({ initialLanguage = 'en' }: PhotographyProps) {
 }
 
 export default Photography;
+

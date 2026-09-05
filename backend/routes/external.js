@@ -54,6 +54,17 @@ async function getSessionByToken(token) {
   return session;
 }
 
+async function getSessionByTokenAnyState(token) {
+  const result = await pool.query(
+    `SELECT id, "userId", token, "expiresAt"
+     FROM "session"
+     WHERE token = $1
+     LIMIT 1`,
+    [token]
+  );
+  return result.rows[0] ?? null;
+}
+
 export default function externalRoutes(dataRouter) {
   const router = Router();
 
@@ -152,6 +163,94 @@ export default function externalRoutes(dataRouter) {
     } catch (error) {
       console.error('External permit processing failed', error);
       return res.status(500).json({ error: 'Failed to process external permit request' });
+    }
+  });
+
+  router.post('/token/verify', async (req, res) => {
+    const token =
+      readTokenFromHeaders(req) ||
+      (typeof req.body?.token === 'string' ? req.body.token.trim() : '');
+    if (!token) {
+      return res.status(400).json({ error: 'Missing token' });
+    }
+
+    try {
+      const session = await getSessionByTokenAnyState(token);
+      if (!session) {
+        return res.status(404).json({ valid: false, error: 'Token not found' });
+      }
+
+      const expired = new Date(session.expiresAt).getTime() <= Date.now();
+      return res.status(200).json({
+        valid: !expired,
+        expired,
+        userId: session.userId,
+        expiresAt: session.expiresAt
+      });
+    } catch (error) {
+      console.error('External token verify failed', error);
+      return res.status(500).json({ error: 'Failed to verify token' });
+    }
+  });
+
+  router.post('/token/refresh', async (req, res) => {
+    const token =
+      readTokenFromHeaders(req) ||
+      (typeof req.body?.token === 'string' ? req.body.token.trim() : '');
+    if (!token) {
+      return res.status(400).json({ error: 'Missing token' });
+    }
+
+    try {
+      const session = await getSessionByToken(token);
+      if (!session) {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+      }
+
+      const ttlSecondsRaw = Number(process.env.EXTERNAL_TOKEN_TTL_SECONDS ?? 86400);
+      const ttlSeconds = Number.isFinite(ttlSecondsRaw) && ttlSecondsRaw > 0
+        ? Math.floor(ttlSecondsRaw)
+        : 86400;
+      const nextExpiry = new Date(Date.now() + ttlSeconds * 1000);
+
+      await pool.query(
+        `UPDATE "session"
+         SET "expiresAt" = $2
+         WHERE token = $1`,
+        [token, nextExpiry]
+      );
+
+      return res.status(200).json({
+        token,
+        expiresAt: nextExpiry.toISOString()
+      });
+    } catch (error) {
+      console.error('External token refresh failed', error);
+      return res.status(500).json({ error: 'Failed to refresh token' });
+    }
+  });
+
+  router.post('/token/revoke', async (req, res) => {
+    const token =
+      readTokenFromHeaders(req) ||
+      (typeof req.body?.token === 'string' ? req.body.token.trim() : '');
+    if (!token) {
+      return res.status(400).json({ error: 'Missing token' });
+    }
+
+    try {
+      const deleted = await pool.query(
+        `DELETE FROM "session"
+         WHERE token = $1`,
+        [token]
+      );
+      if (deleted.rowCount === 0) {
+        return res.status(404).json({ error: 'Token not found' });
+      }
+      return res.status(200).json({ revoked: true });
+    } catch (error) {
+      console.error('External token revoke failed', error);
+      return res.status(500).json({ error: 'Failed to revoke token' });
     }
   });
 

@@ -6,7 +6,7 @@ import fillRoutes from './routes/fill.js';
 import dataRoutes from './routes/data.js';
 import companyRoutes from './routes/companyRoutes.js';
 import { pool } from './utils/db.js';
-import { limiter, authLimiter } from './utils/ratelimiter.js';
+import { limiter, authLimiter, externalTokenLimiter } from './utils/ratelimiter.js';
 import helmet from 'helmet';
 import userRoutes from './routes/users.js';
 import devRoutes from './routes/dev.js';
@@ -28,6 +28,8 @@ app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(limiter);
 // stricter api limiter for auth endpoints
 app.use('/api/auth', authLimiter);
+// stricter limiter for external token and token lifecycle endpoints
+app.use('/api/external/token', externalTokenLimiter);
 // security headers
 app.use(helmet());
 
@@ -43,3 +45,4 @@ app.use('/api/external', externalRoutes(dataRouter));
 
 const PORT = Number(process.env.PORT) || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
